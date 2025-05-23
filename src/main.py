@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-def main():
+#funny name for my ai :)
+# Franklin is a name that is often associated with intelligence and wisdom, making it a fitting choice for an AI.
+# The name Franklin is also a nod to Benjamin Franklin, a polymath known for his contributions to science, politics, and philosophy.
+# This name could suggest that the AI is designed to be versatile and knowledgeable, capable of handling a wide range of tasks and challenges.
+def Franklin():
     # Use absolute path relative to the script location
     current_dir = os.path.dirname(os.path.abspath(__file__))
     train_dir = os.path.join(os.path.dirname(current_dir), "content", "data", "training_data")
@@ -45,11 +49,12 @@ def main():
         # Evaluate model
         print("Evaluating model...")
         test_accuracy = model.accuracy(test_images, test_labels)
+        print(f"Test accuracy: {test_accuracy:.2%}")
         
         # Plot some predictions
-        for i in range(5):  # Show 5 random predictions
+        for i in range(10):
             idx = np.random.randint(0, len(test_images))
             model.plot_prediction(test_images, idx)
 
 if __name__ == "__main__":
-    main()
+    Franklin()
