@@ -37,12 +37,17 @@ class Model:
         self.label_dict = dict(zip(encoded, labels))
 
     def train(self, images_sh, labels_sh):
-        epoch_iput = int(input("Enter the number of learning cycles for training: "))
-        if epoch_iput <= 0:
-            print("Invalid input. Defaulting to 10.")
-            epoch_iput = 10
+        epoch_input = int(input("Enter the number of learning cycles for training: "))
+        try:
+            if epoch_input <= 0:
+                print("Invalid input. Defaulting to 10.")
+                epoch_input = 10
+        except ValueError:
+            print("Invalid input. Please enter a number. Defaulting to 10.")
+            epoch_input = 10
+
         self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-        history = self.model.fit(images_sh, labels_sh, validation_split=0.2, batch_size=16, epochs=epoch_iput, verbose=1)
+        history = self.model.fit(images_sh, labels_sh, validation_split=0.2, batch_size=16, epochs=epoch_input, verbose=1)
         print("Training completed.")
         self.model.summary()
         return history
