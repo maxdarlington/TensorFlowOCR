@@ -56,7 +56,7 @@ class Model:
         encoded_labels = self.le.fit_transform(test_labels)
         test_loss, test_accuracy = self.model.evaluate(test_images, encoded_labels)
         print(f"Test Accuracy: {test_accuracy}")
-        print(f"Test Accuracy: {test_loss}")
+        print(f"Test Loss: {test_loss}")
         return test_accuracy
     
     def plot_prediction(self, test_images, index):
