@@ -100,10 +100,13 @@ class Main():
         test_accuracy = model.accuracy(test_images, test_labels)
         print(f"Test accuracy: {test_accuracy:.2%}")
         
-        # Plot some predictions
-        for i in range(10):
-            idx = np.random.randint(0, len(test_images))
-            model.plot_prediction(test_images, idx)
+        if len(test_images) <= 10:
+            for i in range(len(test_images)):
+                model.plot_prediction(test_images, i)
+        else:
+            for i in range(10):
+                idx = np.random.randint(0, len(test_images))
+                model.plot_prediction(test_images, idx)
 
 main = Main()
 current_dir = os.path.dirname(os.path.abspath(__file__))
