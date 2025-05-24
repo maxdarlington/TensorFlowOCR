@@ -1,7 +1,6 @@
 import tensorflow as tf 
 from keras.models import Sequential
 from keras.layers import Conv2D, Flatten, MaxPooling2D, Dense
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
@@ -38,9 +37,22 @@ class Model:
         self.label_dict = dict(zip(encoded, labels))
 
     def train(self, images_sh, labels_sh):
+        epoch_iput = int(input("Enter the number of learning cycles for training: "))
+        if epoch_iput <= 0:
+            print("Invalid input. Defaulting to 10.")
+            epoch_iput = 10
         self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-        history = self.model.fit(images_sh, labels_sh, validation_split=0.2, batch_size=16, epochs=10)
+        history = self.model.fit(images_sh, labels_sh, validation_split=0.2, batch_size=16, epochs=epoch_iput, verbose=1)
+        print("Training completed.")
+        self.model.summary()
         return history
+    
+    def accuracy(self, test_images, test_labels):
+        encoded_labels = self.le.fit_transform(test_labels)
+        test_loss, test_accuracy = self.model.evaluate(test_images, encoded_labels)
+        print(f"Test Accuracy: {test_accuracy}")
+        print(f"Test Accuracy: {test_loss}")
+        return test_accuracy
     
     def plot_prediction(self, test_images, index):
         preds = self.model.predict(test_images)
@@ -52,9 +64,12 @@ class Model:
         plt.axis('off')
         plt.show()
 
-    def accuracy(self, test_images, test_labels):
-        encoded_labels = self.le.fit_transform(test_labels)
-        test_loss, test_accuracy = self.model.evaluate(test_images, encoded_labels)
-        print(f"Test Accuracy: {test_accuracy}")
-        print(f"Test Accuracy: {test_loss}")
-        return test_accuracy
+    def save_model(self, model_path):
+        if not model_path.endswith('.keras'):
+            model_path += '.keras'
+        self.model.save(model_path)
+        print(f"Model saved to: {model_path}")
+
+    def load_model(self, model_path):
+        self.model = tf.keras.models.load_model(model_path)
+        print(f"Model loaded from {model_path}")

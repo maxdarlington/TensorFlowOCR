@@ -6,24 +6,9 @@ from sklearn.utils import shuffle
 
 class DatasetLoader:
     def __init__(self, data_dir):
-        """
-        Initialize the DatasetLoader with the data directory path.
-        
-        Args:
-            data_dir (str): Path to the directory containing the dataset
-        """
         self.data_dir = data_dir
         
     def preprocess_image(self, image_path):
-        """
-        Preprocess a single image to be 28x28 grayscale.
-        
-        Args:
-            image_path (str): Path to the image file
-            
-        Returns:
-            numpy.ndarray: Preprocessed image as a 28x28 grayscale array
-        """
         try:
             # Load image
             img = Image.open(image_path)
@@ -44,13 +29,6 @@ class DatasetLoader:
             return None
     
     def load_dataset(self):
-        """
-        Load all images from the data directory and preprocess them.
-        
-        Returns:
-            tuple: (images, labels) where images is a numpy array of preprocessed images
-                  and labels is a list of corresponding labels
-        """
         images = []
         labels = []
         
@@ -78,7 +56,7 @@ class DatasetLoader:
         print(f"Image shape: {images.shape}")
         print(f"Unique labels: {set(labels)}")
         
-        # Encode labels from string to integer
+        # Encode labels from string to integer for use in model
         le = LabelEncoder()
         labels = le.fit_transform(labels)
         print("Finished encoding labels")
