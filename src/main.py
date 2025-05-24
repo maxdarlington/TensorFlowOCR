@@ -84,15 +84,11 @@ if __name__ == "__main__":
         print("1. Train a new model")
         print("2. Test an existing model")
         print("3. Exit")
-        choice = input("Please select an option (1-3): ")
+        choice = input("Please select a valid option (1-3): ")
 
         if choice == '1':
             main.trainingMode(main.train_dir, main.save_dir)
-            continue_choice = input("Do you want to test the model now? (y/n): ")
-            if continue_choice.lower() == 'y':
-                main.testMode(main.test_dir, main.save_dir)
-            else:
-                print("Returning to main menu...")
+            print("Returning to main menu...")
         elif choice == '2':
             main.testMode(main.test_dir, main.save_dir)
             print("Returning to main menu...")
