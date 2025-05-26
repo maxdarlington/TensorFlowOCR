@@ -3,6 +3,7 @@ from model import Model
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import sys
 
 class Main():
     def __init__(self):
@@ -75,7 +76,7 @@ class Main():
             return
         
         # Get model file paths
-        print("\nAvailable models:")
+        print("Available models:")
         model_files = [f for f in os.listdir(model_dir) if f.endswith('.keras')]
         if not model_files:
             print("No models found. Exiting test mode.")
@@ -109,7 +110,6 @@ class Main():
                 model.plot_prediction(test_images, idx)
 
 main = Main()
-current_dir = os.path.dirname(os.path.abspath(__file__))
 if __name__ == "__main__":
     while True:
         print("Welcome to Max's TensorFlow OCR!")
@@ -126,7 +126,7 @@ if __name__ == "__main__":
             print("Returning to main menu...")
         elif choice == '3':
             print("Exiting program...")
-            break
+            sys.exit(0) #terminate the program
         else:
             print("Invalid choice. Please select a number between 1 and 3.")
             continue
