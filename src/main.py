@@ -98,7 +98,7 @@ class Main():
         # Evaluate model
         print("Evaluating model...")
         test_accuracy = model.accuracy(test_images, test_labels)
-        print(f"Test accuracy: {test_accuracy:.2%}")
+        print(f"Test Accuracy: {test_accuracy:.2%}")
         
         if len(test_images) <= 10:
             for i in range(len(test_images)):
