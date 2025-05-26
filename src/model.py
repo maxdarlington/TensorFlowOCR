@@ -64,10 +64,26 @@ class Model:
     def accuracy(self, test_images, test_labels):
         # Use same encoding as training
         str_labels = [str(label).upper() for label in test_labels]
-        encoded_labels = np.array([self.label_to_idx[label] for label in str_labels if label in self.valid_labels])
         valid_indices = [i for i, label in enumerate(str_labels) if label in self.valid_labels]
+        
+        # Check if we have any valid labels
+        if not valid_indices:
+            print("No valid labels found in test data")
+            return 0.0
+            
+        encoded_labels = np.array([self.label_to_idx[label] for label in str_labels if label in self.valid_labels])
         filtered_images = test_images[valid_indices]
         
+        # Ensure we have matching data
+        if len(filtered_images) != len(encoded_labels):
+            print("Mismatch between images and labels")
+            return 0.0
+        
+        # Ensure we have at least some data to evaluate
+        if len(filtered_images) == 0:
+            print("No valid test data available")
+            return 0.0
+            
         test_loss, test_accuracy = self.model.evaluate(filtered_images, encoded_labels)
         print(f"Test Accuracy: {test_accuracy}")
         print(f"Test Loss: {test_loss}")
