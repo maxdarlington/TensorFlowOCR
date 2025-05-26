@@ -55,11 +55,6 @@ class DatasetLoader:
         print(f"Loaded {len(images)} images")
         print(f"Image shape: {images.shape}")
         print(f"Unique labels: {set(labels)}")
-        
-        # Encode labels from string to integer for use in model
-        le = LabelEncoder()
-        labels = le.fit_transform(labels)
-        print("Finished encoding labels")
 
         # Shuffle the dataset
         images_sh, labels_sh = shuffle(images, labels, random_state=42)
