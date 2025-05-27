@@ -1,0 +1,127 @@
+Batch loading:
+def load_dataset(self):
+    images = []
+    labels = []
+    batch_size = 1000  # Process 1000 images at a time
+    
+    # Pre-collect all file paths
+    file_list = []
+    for root, _, files in os.walk(self.data_dir):
+        file_list.extend((root, f) for f in files 
+                        if f.lower().endswith(('.png', '.jpg', '.jpeg')))
+    
+    # Process in batches
+    for i in range(0, len(file_list), batch_size):
+        batch = file_list[i:i+batch_size]
+        batch_images = []
+        batch_labels = []
+        
+        for root, file in batch:
+            image_path = os.path.join(root, file)
+            label = os.path.basename(root)
+            img = self.preprocess_image(image_path)
+            if img is not None:
+                batch_images.append(img)
+                batch_labels.append(label)
+                
+        images.extend(batch_images)
+        labels.extend(batch_labels)
+
+Benefits:
+
+Reduces memory spikes by processing images in smaller chunks
+Allows for progress tracking
+More efficient memory usage
+
+TensorFlow Dataset API Integration
+def train(self, images_sh, labels_sh):
+    # Convert to TensorFlow Dataset
+    train_dataset = tf.data.Dataset.from_tensor_slices((images_sh, labels_sh))
+    train_dataset = train_dataset.cache()  # Cache the dataset in memory
+    train_dataset = train_dataset.shuffle(buffer_size=1000)  # Shuffle with a buffer
+    train_dataset = train_dataset.batch(32)  # Create batches
+    train_dataset = train_dataset.prefetch(tf.data.AUTOTUNE)  # Prefetch next batch
+
+Benefits:
+
+Automatic batching and prefetching
+Built-in data caching
+Optimized memory usage
+Better GPU utilization
+
+GPU Memory Management
+
+def __init__(self):
+    # Configure GPU memory growth
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+        except RuntimeError as e:
+            print(e)
+
+Benefits:
+
+Prevents TensorFlow from allocating all GPU memory at once
+Allows other processes to use GPU memory
+Reduces out-of-memory errors
+
+Parallel Processing
+from concurrent.futures import ThreadPoolExecutor
+import multiprocessing
+
+def load_dataset(self):
+    num_workers = multiprocessing.cpu_count()
+    
+    def process_file(args):
+        root, file = args
+        if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+            image_path = os.path.join(root, file)
+            label = os.path.basename(root)
+            return (self.preprocess_image(image_path), label)
+        return None
+    
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        results = list(executor.map(process_file, 
+                    [(root, f) for root, _, files in os.walk(self.data_dir) 
+                     for f in files]))
+
+Benefits:
+
+Utilizes all CPU cores
+Significantly faster image loading
+Better I/O handling with threading
+
+Memory Optimization with Generators
+def train(self, images_sh, labels_sh):
+    def data_generator(images, labels, batch_size=32):
+        num_samples = len(images)
+        while True:
+            indices = np.random.permutation(num_samples)
+            for offset in range(0, num_samples, batch_size):
+                batch_indices = indices[offset:offset + batch_size]
+                yield (images[batch_indices], labels[batch_indices])
+
+Benefits:
+
+Reduces memory usage by generating batches on-the-fly
+Allows training on larger datasets
+Built-in shuffling per epoch
+
+Benefits:
+
+Reduces memory usage by generating batches on-the-fly
+Allows training on larger datasets
+Built-in shuffling per epoch
+To implement these optimizations:
+
+Start with the GPU memory management in Model.__init__
+Implement batch loading in DatasetLoader.load_dataset
+Add TensorFlow Dataset API integration
+Finally, add parallel processing if needed
+Remember to test each change individually and monitor:
+
+Memory usage (Task Manager on Windows)
+GPU utilization (nvidia-smi if using NVIDIA GPU)
+Training speed improvements
