@@ -13,13 +13,14 @@ class DatasetLoader:
             # Load image
             img = Image.open(image_path)
             
+            if img.size != (28, 28):
+                # Resize if not already 28x28
+                img = img.resize((28, 28), Image.Resampling.BILINEAR)
+
             # Convert to grayscale
             img = img.convert('L')
-            
-            # Resize to 28x28
-            img = img.resize((28, 28), Image.BILINEAR)
-            
-            # Convert to numpy array and normalize to [0, 1]
+                        
+            # Convert to numpy array and normalize to float value between 0 - 1
             img_array = np.array(img) / 255.0
             
             return img_array
@@ -61,3 +62,4 @@ class DatasetLoader:
         print("Finished shuffling images and labels")
 
         return images_sh, labels_sh
+
