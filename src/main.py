@@ -87,7 +87,7 @@ class Main():
         
         model_idx = int(input("Select model number: ")) - 1
         if model_idx < 0 or model_idx >= len(model_files):
-            print("Invalid selection. Exiting test mode.")
+            print("Invalid selection. Exiting test mode.")            
             return
         model_path = os.path.join(model_dir, model_files[model_idx])
         
@@ -98,12 +98,12 @@ class Main():
         
         # Evaluate model
         print("Evaluating model...")
-        test_accuracy = model.accuracy(test_images, test_labels)
-        print(f"Test Accuracy: {test_accuracy:.2%}")
-        
+        model.accuracy(test_images, test_labels)
+
         if len(test_images) <= 10:
             for i in range(len(test_images)):
                 model.plot_prediction(test_images, i)
+
         else:
             for i in range(10):
                 idx = np.random.randint(0, len(test_images))

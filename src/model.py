@@ -79,15 +79,15 @@ class Model:
             print("Mismatch between images and labels")
             return 0.0
         
-        # Ensure we have at least some data to evaluate
+        # Ensure we have some data to evaluate
         if len(filtered_images) == 0:
             print("No valid test data available")
             return 0.0
             
         test_loss, test_accuracy = self.model.evaluate(filtered_images, encoded_labels)
-        print(f"Test Accuracy: {test_accuracy}")
-        print(f"Test Loss: {test_loss}")
-        return test_accuracy
+        print(f"Test Accuracy: {test_accuracy:.2%}")
+        print(f"Test Loss: {test_loss:.2f}")
+        return test_accuracy, test_loss
     
     def plot_prediction(self, test_images, index):
         preds = self.model.predict(test_images)
