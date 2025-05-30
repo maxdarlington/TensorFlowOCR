@@ -9,7 +9,8 @@ class Main():
     def __init__(self):
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(os.path.dirname(self.base_dir), "content", "data",)
-        self.save_dir = os.path.join(os.path.dirname(self.base_dir), "content", "saved_models")
+        self.model_dir = os.path.join(os.path.dirname(self.base_dir), "content", "models")
+        self.datasetloader = DatasetLoader(self.data_dir, self.base_dir)
 
     def dataDirCheck(self, data_dir):
         # Get available test data directories
@@ -30,11 +31,10 @@ class Main():
         selected_test_dir = os.path.join(data_dir, data_dirs[data_idx])
         
         print(f"Loading data from {data_dirs[data_idx]}...")
-        data_loader = DatasetLoader(selected_test_dir)
-        images, labels = data_loader.load_dataset()
+        images, labels = self.datasetloader.load_dataset(selected_test_dir)
         return images, labels
 
-    def trainingMode(self, data_dir, save_dir):
+    def trainingMode(self, data_dir, model_dir):
         # Initialize the dataset loader with error checking
         training_images, training_labels = self.dataDirCheck(data_dir)
         if training_images is None or training_labels is None:
@@ -46,8 +46,7 @@ class Main():
             
         # Load training data
         print("Loading training data...")
-        training_loader = DatasetLoader(data_dir)
-        train_images, train_labels = training_loader.load_dataset()
+        train_images, train_labels = self.datasetloader.load_dataset(data_dir)
 
         # Initialize and train the model
         print("Initializing model...")
@@ -66,7 +65,7 @@ class Main():
         plt.show()
 
         file_name = input("Enter a name for the model file (without extension): ")
-        model.save_model(os.path.join(save_dir, f"{file_name}.keras"))
+        model.save_model(os.path.join(model_dir, f"{file_name}.keras"))
         print(f"Model saved as {file_name}.keras")
 
     def testMode(self, data_dir, model_dir):
@@ -116,17 +115,43 @@ if __name__ == "__main__":
         print("1. Train a new model")
         print("2. Test an existing model")
         print("3. Exit")
+        print("4. test feature")
         choice = input("Please select a valid option (1-3): ")
 
         if choice == '1':
-            main.trainingMode(main.data_dir, main.save_dir)
+            main.trainingMode(main.data_dir, main.model_dir)
             print("Returning to main menu...")
         elif choice == '2':
-            main.testMode(main.data_dir, main.save_dir)
+            main.testMode(main.data_dir, main.model_dir)
             print("Returning to main menu...")
         elif choice == '3':
             print("Exiting program...")
             sys.exit(0) #terminate the program
+        elif choice == '4':
+            # List available .npz files
+            print("Available processed datasets:")
+            npz_files = [f for f in os.listdir(main.data_dir) if f.endswith('.npz')]
+            if not npz_files:
+                print("No processed datasets found.")
+                continue
+                
+            for i, file in enumerate(npz_files):
+                print(f"{i+1}. {file}")
+            
+            try:
+                file_idx = int(input("Select dataset number: ")) - 1
+                if file_idx < 0 or file_idx >= len(npz_files):
+                    print("Invalid selection.")
+                    continue
+                
+                npz_path = os.path.join(main.data_dir, npz_files[file_idx])
+                data = main.datasetloader.load_processed_data(npz_path)
+                if data:
+                    print(f"Successfully loaded data:")
+                    print(f"Images shape: {data['images_shape']}")
+                    print(f"Labels shape: {data['labels_shape']}")
+            except ValueError:
+                print("Invalid input. Please enter a number.")
         else:
             print("Invalid choice. Please select a number between 1 and 3.")
             continue
