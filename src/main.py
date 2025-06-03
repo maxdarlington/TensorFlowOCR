@@ -36,18 +36,14 @@ class Main():
 
     def trainingMode(self, data_dir, model_dir):
         # Initialize the dataset loader with error checking
-        training_images, training_labels = self.dataDirCheck(data_dir)
-        if training_images is None or training_labels is None:
+        train_images, train_labels = self.dataDirCheck(data_dir)
+        if train_images is None or train_labels is None:
             return
         
         if not os.path.exists(data_dir):
             print(f"Error: Training directory not found at {data_dir}")
             return
-            
-        # Load training data
-        print("Loading training data...")
-        train_images, train_labels = self.datasetloader.load_dataset(data_dir)
-
+        
         # Initialize and train the model
         print("Initializing model...")
         model = Model()
