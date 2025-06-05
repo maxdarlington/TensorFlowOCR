@@ -1,7 +1,4 @@
-from dataUtil import DatasetLoader
 from model import Model
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import sys
 
@@ -10,7 +7,14 @@ class Main():
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(os.path.dirname(self.base_dir), "content", "data",)
         self.model_dir = os.path.join(os.path.dirname(self.base_dir), "content", "models")
-        self.datasetloader = DatasetLoader(self.data_dir, self.base_dir)
+        self._datasetloader = None
+
+    @property
+    def datasetloader(self):
+        if self._datasetloader is None:
+            from dataUtil import DatasetLoader
+            self._datasetloader = DatasetLoader(self.data_dir, self.base_dir)
+        return self._datasetloader
 
     def dataDirCheck(self, data_dir):
         # Get available test data directories
@@ -35,6 +39,8 @@ class Main():
         return images, labels
 
     def trainingMode(self, data_dir, model_dir):
+        # Import here instead of at top
+        import matplotlib.pyplot as plt
         # Initialize the dataset loader with error checking
         train_images, train_labels = self.dataDirCheck(data_dir)
         if train_images is None or train_labels is None:
@@ -65,6 +71,8 @@ class Main():
         print(f"Model saved as {file_name}.keras")
 
     def testMode(self, data_dir, model_dir):
+        # Import here instead of at top
+        import numpy as np
         # Get test data
         test_images, test_labels = self.dataDirCheck(data_dir)
         if test_images is None or test_labels is None:
@@ -111,7 +119,6 @@ if __name__ == "__main__":
         print("1. Train a new model")
         print("2. Test an existing model")
         print("3. Exit")
-        print("4. test feature")
         choice = input("Please select a valid option (1-3): ")
 
         if choice == '1':
