@@ -1,7 +1,6 @@
 import os
 from PIL import Image
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import shuffle
 
 class DatasetLoader:
