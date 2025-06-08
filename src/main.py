@@ -28,11 +28,15 @@ class Main():
             print(f"{i+1}. {dir_name}")
         
         # Select test directory
-        data_idx = int(input("Select dataset number: ")) - 1
-        if data_idx < 0 or data_idx >= len(data_dirs):
-            print("Invalid selection. Exiting test mode.")
+        try:
+            data_idx = int(input("Select dataset number: ")) - 1
+            if data_idx < 0 or data_idx >= len(data_dirs):
+                print("Invalid selection. Exiting test mode.")
+                return None, None
+            selected_test_dir = os.path.join(data_dir, data_dirs[data_idx])
+        except ValueError:
+            print("Invalid input. Please enter a number.")
             return None, None
-        selected_test_dir = os.path.join(data_dir, data_dirs[data_idx])
         
         print(f"Loading data from {data_dirs[data_idx]}...")
         images, labels = self.datasetloader.load_dataset(selected_test_dir)
