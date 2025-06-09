@@ -6,7 +6,7 @@ class Main():
     def __init__(self):
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(os.path.dirname(self.base_dir), "content", "data",)
-        self.model_dir = os.path.join(os.path.dirname(self.base_dir), "content", "models")
+        self.model_dir = os.path.join(os.path.dirname(self.base_dir), "content", "saved_models")
         self._datasetloader = None
 
     @property

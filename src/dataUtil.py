@@ -17,6 +17,8 @@ class DatasetLoader:
                 # Resize if not already 28x28
                 print(f"Resizing image {image_path} from {img.size} to (28, 28)")
                 img = img.resize((28, 28), Image.Resampling.BILINEAR)
+            else:
+                print(f"Image {image_path} is already 28x28")
 
             # Convert to grayscale
             img = img.convert('L')
