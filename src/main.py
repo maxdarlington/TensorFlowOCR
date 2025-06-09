@@ -22,7 +22,7 @@ class Main():
         if self._CharacterImageGenerator is None:
             #remeber error: reached maximum recursion depth, 
             #fixed by adding underscore prefix for private variable
-            from character_image_generator import CharacterImageGenerator
+            from imgUtil import CharacterImageGenerator
             self._CharacterImageGenerator = CharacterImageGenerator()
         return self._CharacterImageGenerator
 
