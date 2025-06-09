@@ -7,46 +7,30 @@ class Main():
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(os.path.dirname(self.base_dir), "content", "data",)
         self.model_dir = os.path.join(os.path.dirname(self.base_dir), "content", "saved_models")
-        self._datasetloader = None
+        self._DatasetLoader = None
+        self._CharacterImageGenerator = None  # Add underscore prefix for private variable
 
     @property
-    def datasetloader(self):
-        if self._datasetloader is None:
+    def DatasetLoader(self):
+        if self._DatasetLoader is None:
             from dataUtil import DatasetLoader
-            self._datasetloader = DatasetLoader(self.data_dir, self.base_dir)
-        return self._datasetloader
-
-    def dataDirCheck(self, data_dir):
-        # Get available test data directories
-        print("Available datasets:")
-        data_dirs = [d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))]
-        if not data_dirs:
-            print("No datasets found.")
-            return None, None
-            
-        for i, dir_name in enumerate(data_dirs):
-            print(f"{i+1}. {dir_name}")
-        
-        # Select test directory
-        try:
-            data_idx = int(input("Select dataset number: ")) - 1
-            if data_idx < 0 or data_idx >= len(data_dirs):
-                print("Invalid selection. Exiting test mode.")
-                return None, None
-            selected_test_dir = os.path.join(data_dir, data_dirs[data_idx])
-        except ValueError:
-            print("Invalid input. Please enter a number.")
-            return None, None
-        
-        print(f"Loading data from {data_dirs[data_idx]}...")
-        images, labels = self.datasetloader.load_dataset(selected_test_dir)
-        return images, labels
+            self._DatasetLoader = DatasetLoader(self.data_dir, self.base_dir)
+        return self._DatasetLoader
+    
+    @property
+    def CharacterImageGenerator(self):
+        if self._CharacterImageGenerator is None:
+            #remeber error: reached maximum recursion depth, 
+            #fixed by adding underscore prefix for private variable
+            from character_image_generator import CharacterImageGenerator
+            self._CharacterImageGenerator = CharacterImageGenerator()
+        return self._CharacterImageGenerator
 
     def trainingMode(self, data_dir, model_dir):
         # Import here instead of at top
         import matplotlib.pyplot as plt
         # Initialize the dataset loader with error checking
-        train_images, train_labels = self.dataDirCheck(data_dir)
+        train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
         if train_images is None or train_labels is None:
             return
         
@@ -78,7 +62,7 @@ class Main():
         # Import here instead of at top
         import numpy as np
         # Get test data
-        test_images, test_labels = self.dataDirCheck(data_dir)
+        test_images, test_labels = self.DatasetLoader.dataDirCheck(data_dir)
         if test_images is None or test_labels is None:
             return
         
@@ -122,43 +106,26 @@ if __name__ == "__main__":
         print("Welcome to Max's TensorFlow OCR!")
         print("1. Train a new model")
         print("2. Test an existing model")
-        print("3. Exit")
+        print("3. Generate custom dataset of character images")
+        print("4. Exit")
+
         choice = input("Please select a valid option (1-3): ")
 
         if choice == '1':
             main.trainingMode(main.data_dir, main.model_dir)
             print("Returning to main menu...")
+
         elif choice == '2':
             main.testMode(main.data_dir, main.model_dir)
             print("Returning to main menu...")
+
         elif choice == '3':
+            main.CharacterImageGenerator.process_fonts()
+
+        elif choice == '4':
             print("Exiting program...")
             sys.exit(0) #terminate the program
-        elif choice == '4':
-            # List available .npz files
-            print("Available processed datasets:")
-            npz_files = [f for f in os.listdir(main.data_dir) if f.endswith('.npz')]
-            if not npz_files:
-                print("No processed datasets found.")
-                continue
-                
-            for i, file in enumerate(npz_files):
-                print(f"{i+1}. {file}")
-            
-            try:
-                file_idx = int(input("Select dataset number: ")) - 1
-                if file_idx < 0 or file_idx >= len(npz_files):
-                    print("Invalid selection.")
-                    continue
-                
-                npz_path = os.path.join(main.data_dir, npz_files[file_idx])
-                data = main.datasetloader.load_processed_data(npz_path)
-                if data:
-                    print(f"Successfully loaded data:")
-                    print(f"Images shape: {data['images_shape']}")
-                    print(f"Labels shape: {data['labels_shape']}")
-            except ValueError:
-                print("Invalid input. Please enter a number.")
+
         else:
             print("Invalid choice. Please select a number between 1 and 3.")
             continue

@@ -102,3 +102,29 @@ class DatasetLoader:
         except Exception as e:
             print(f"Error loading data: {str(e)}")
             return None
+
+    def dataDirCheck(self, data_dir):
+        # Get available test data directories
+        print("Available datasets:")
+        data_dirs = [d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))]
+        if not data_dirs:
+            print("No datasets found.")
+            return None, None
+            
+        for i, dir_name in enumerate(data_dirs):
+            print(f"{i+1}. {dir_name}")
+        
+        # Select test directory
+        try:
+            data_idx = int(input("Select dataset number: ")) - 1
+            if data_idx < 0 or data_idx >= len(data_dirs):
+                print("Invalid selection. Exiting test mode.")
+                return None, None
+            selected_test_dir = os.path.join(data_dir, data_dirs[data_idx])
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+            return None, None
+        
+        print(f"Loading data from {data_dirs[data_idx]}...")
+        images, labels = self.load_dataset(selected_test_dir)  
+        return images, labels
