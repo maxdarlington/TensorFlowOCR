@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 import os
-import random  # Add this import at the top
+import random
 
 class CharacterImageGenerator:
     def __init__(self):
@@ -38,6 +38,10 @@ class CharacterImageGenerator:
         img = Image.new("L", padded_size, color="white")
         draw = ImageDraw.Draw(img)
 
+        # Apply random rotation
+        rotation = random.uniform(-20, 20)
+        img = img.rotate(rotation, resample=Image.Resampling.BILINEAR, expand=False)
+        
         # Get size of text to center it
         bbox = draw.textbbox((0, 0), char, font=font)
         text_width = bbox[2] - bbox[0]
@@ -47,10 +51,6 @@ class CharacterImageGenerator:
         
         # Draw the character
         draw.text(position, char, fill="black", font=font)
-        
-        # Apply random rotation
-        rotation = random.uniform(-20, 20)
-        img = img.rotate(rotation, resample=Image.Resampling.BILINEAR, expand=False)
         
         # Crop to final size
         left = padding//2
@@ -72,7 +72,7 @@ class CharacterImageGenerator:
         filename = f"{font_name}_{safe_name}.png"
         img.save(os.path.join(char_dir, filename))
 
-    def process_fonts(self):
+    def generateImages(self):
         # Get all font files from fonts directory
         font_files = [f for f in os.listdir(self.fonts_dir) if f.endswith(('.ttf', '.otf'))]
         
