@@ -30,12 +30,21 @@ class Main():
         # Import here instead of at top
         import matplotlib.pyplot as plt
         # Initialize the dataset loader with error checking
-        train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
-        if train_images is None or train_labels is None:
-            return
-        
-        if not os.path.exists(data_dir):
-            print(f"Error: Training directory not found at {data_dir}")
+        choice = input("Please select a valid option (1-2): ")
+        print("1. Load processed dataset (.npz)")
+        print("2. Process dataset")
+        if choice == 1:     
+            train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
+            if train_images is None or train_labels is None:
+                return
+            
+            if not os.path.exists(data_dir):
+                print(f"Error: Training directory not found at {data_dir}")
+                return
+        elif choice == 2:
+            main.DatasetLoader.npzCheck(data_dir)
+        else:
+            print("Invalid choice. Please select a number between 1 and 2.")
             return
         
         # Initialize and train the model
@@ -62,8 +71,21 @@ class Main():
         # Import here instead of at top
         import numpy as np
         # Get test data
-        test_images, test_labels = self.DatasetLoader.dataDirCheck(data_dir)
-        if test_images is None or test_labels is None:
+        print("1. Process dataset")
+        print("2. Load processed dataset (.npz)")
+        choice = int(input("Please select a valid option (1-2): "))
+        if choice == 1:     
+            test_images, test_labels = self.DatasetLoader.dataDirCheck(data_dir)
+            if test_images is None or test_labels is None:
+                return
+            
+            if not os.path.exists(data_dir):
+                print(f"Error: Training directory not found at {data_dir}")
+                return
+        elif choice == 2:
+            test_images, test_labels = self.DatasetLoader.npzCheck(data_dir)
+        else:
+            print("Invalid choice. Please select a number between 1 and 2.")
             return
         
         # Get model file paths
@@ -109,7 +131,7 @@ if __name__ == "__main__":
         print("3. Generate custom dataset of character images")
         print("4. Exit")
 
-        choice = input("Please select a valid option (1-3): ")
+        choice = input("Please select a valid option (1-4): ")
 
         if choice == '1':
             main.trainingMode(main.data_dir, main.model_dir)
@@ -120,7 +142,7 @@ if __name__ == "__main__":
             print("Returning to main menu...")
 
         elif choice == '3':
-            main.CharacterImageGenerator.process_fonts()
+            main.CharacterImageGenerator.generateImages()
 
         elif choice == '4':
             print("Exiting program...")
