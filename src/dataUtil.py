@@ -80,8 +80,6 @@ class DatasetLoader:
             np.savez(filepath,
                     images=images,
                     labels=labels,
-                    images_shape=images.shape,
-                    labels_shape=labels.shape
                     )            
             print(f"Processed data saved to {filepath}")
             return filepath
@@ -92,16 +90,13 @@ class DatasetLoader:
     def load_processed_data(self, filename):
         try:
             data = np.load(filename)
-            return {
-                'images': data['images'],
-                'labels': data['labels'],
-                'images_shape': data['images_shape'],
-                'labels_shape': data['labels_shape']
-            }
+            images = data['images']
+            labels = data['labels']
+            return images, labels
 
         except Exception as e:
             print(f"Error loading data: {str(e)}")
-            return None
+            return None, None
 
     def dataDirCheck(self, data_dir):
         # Get available test data directories
@@ -128,3 +123,59 @@ class DatasetLoader:
         print(f"Loading data from {data_dirs[data_idx]}...")
         images, labels = self.load_dataset(selected_test_dir)  
         return images, labels
+    
+    def npzCheck(self, data_dir):
+        print(f"Checking for .npz files in: {data_dir}")
+        
+        # Verify directory exists
+        if not os.path.exists(data_dir):
+            print(f"Error: Directory {data_dir} does not exist")
+            return None, None
+        
+        # Get available test data files with debug info
+        files = [file for file in os.listdir(data_dir) if file.endswith('.npz')]
+        print(f"Found {len(files)} .npz files")
+        
+        if not files:
+            print("No .npz files found.")
+            return None, None
+            
+        # Print available files with full paths
+        for i, filename in enumerate(files):
+            full_path = os.path.join(data_dir, filename)
+            print(f"{i+1}. {filename} ({full_path})")
+        
+        # Select test file
+        try:
+            idx = int(input("Select dataset number: ")) - 1
+            if idx < 0 or idx >= len(files):
+                print(f"Invalid selection. Index {idx+1} out of range (1-{len(files)})")
+                return None, None
+                
+            selected_file = os.path.join(data_dir, files[idx])
+            print(f"Loading data from: {selected_file}")
+            
+            # Try loading the file
+            try:
+                data = np.load(selected_file)
+                if 'images' not in data or 'labels' not in data:
+                    print(f"Error: File missing required arrays 'images' or 'labels'")
+                    print(f"Available arrays: {data.files}")
+                    return None, None
+                    
+                images = data['images']
+                labels = data['labels']
+                
+                print(f"Successfully loaded:")
+                print(f"- Images shape: {images.shape}")
+                print(f"- Labels shape: {labels.shape}")
+                
+                return images, labels
+                
+            except Exception as e:
+                print(f"Error loading npz file: {str(e)}")
+                return None, None
+                
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+            return None, None
