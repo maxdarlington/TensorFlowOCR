@@ -30,9 +30,10 @@ class Main():
         # Import here instead of at top
         import matplotlib.pyplot as plt
         # Initialize the dataset loader with error checking
-        choice = input("Please select a valid option (1-2): ")
-        print("1. Load processed dataset (.npz)")
-        print("2. Process dataset")
+        print("1. Process dataset")
+        print("2. Load processed dataset (.npz)")
+        choice = int(input("Please select a valid option (1-2): "))
+
         if choice == 1:     
             train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
             if train_images is None or train_labels is None:
@@ -42,7 +43,7 @@ class Main():
                 print(f"Error: Training directory not found at {data_dir}")
                 return
         elif choice == 2:
-            main.DatasetLoader.npzCheck(data_dir)
+            train_images, train_labels = main.DatasetLoader.npzCheck(data_dir)
         else:
             print("Invalid choice. Please select a number between 1 and 2.")
             return
@@ -68,7 +69,6 @@ class Main():
         print(f"Model saved as {file_name}.keras")
 
     def testMode(self, data_dir, model_dir):
-        # Import here instead of at top
         import numpy as np
         # Get test data
         print("1. Process dataset")
