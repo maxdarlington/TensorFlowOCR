@@ -30,9 +30,10 @@ class Main():
         # Import here instead of at top
         import matplotlib.pyplot as plt
         # Initialize the dataset loader with error checking
-        choice = input("Please select a valid option (1-2): ")
         print("1. Load processed dataset (.npz)")
         print("2. Process dataset")
+        choice = input("Please select a valid option (1-2): ")
+
         if choice == 1:     
             train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
             if train_images is None or train_labels is None:
