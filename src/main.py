@@ -1,6 +1,7 @@
 from model import Model
 import os
 import sys
+import time
 
 class Main():
     def __init__(self):
@@ -8,7 +9,7 @@ class Main():
         self.data_dir = os.path.join(os.path.dirname(self.base_dir), "content", "data",)
         self.model_dir = os.path.join(os.path.dirname(self.base_dir), "content", "saved_models")
         self._DatasetLoader = None
-        self._CharacterImageGenerator = None  # Add underscore prefix for private variable
+        self._CharacterImageGenerator = None  # add underscore prefix for private variable (add to log later)
 
     @property
     def DatasetLoader(self):
@@ -20,19 +21,17 @@ class Main():
     @property
     def CharacterImageGenerator(self):
         if self._CharacterImageGenerator is None:
-            #remeber error: reached maximum recursion depth, 
-            #fixed by adding underscore prefix for private variable
             from imgUtil import CharacterImageGenerator
             self._CharacterImageGenerator = CharacterImageGenerator()
         return self._CharacterImageGenerator
 
     def trainingMode(self, data_dir, model_dir):
-        # Import here instead of at top
         import matplotlib.pyplot as plt
-        # Initialize the dataset loader with error checking
-        print("1. Load processed dataset (.npz)")
-        print("2. Process dataset")
-        choice = input("Please select a valid option (1-2): ")
+
+        # dataset submenu
+        print("1. Process dataset")
+        print("2. Load processed dataset (.npz)")
+        choice = int(input("Please select a valid option (1-2): "))
 
         if choice == 1:     
             train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
@@ -42,39 +41,50 @@ class Main():
             if not os.path.exists(data_dir):
                 print(f"Error: Training directory not found at {data_dir}")
                 return
+            
         elif choice == 2:
-            main.DatasetLoader.npzCheck(data_dir)
+            train_images, train_labels = self.DatasetLoader.npzCheck(data_dir)
+            if train_images is None or train_labels is None:
+                return
+            
         else:
             print("Invalid choice. Please select a number between 1 and 2.")
             return
         
-        # Initialize and train the model
-        print("Initializing model...")
-        model = Model()
-        history = model.train(train_images, train_labels)
-        print("Training model...")
-        
-        # Plot training history
-        plt.figure(figsize=(10, 5))
-        plt.plot(history.history['loss'], label='Training Loss')
-        plt.plot(history.history['val_loss'], label='Validation Loss')
-        plt.title('Model Loss During Training')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.show()
+        # model training section
+        try:
+            print("Initializing model...")
+            model = Model()
+            history = model.train(train_images, train_labels)
+            print("Training model...")
+            
+            # plot training history against validation loss
+            plt.figure(figsize=(10, 5))
+            plt.plot(history.history['loss'], label='Training Loss')
+            plt.plot(history.history['val_loss'], label='Validation Loss')
+            plt.title('Model Loss During Training')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.legend()
+            plt.show()
 
-        file_name = input("Enter a name for the model file (without extension): ")
-        model.save_model(os.path.join(model_dir, f"{file_name}.keras"))
-        print(f"Model saved as {file_name}.keras")
+            file_name = input("Enter a name for the model file (without extension): ")
+            model.save_model(os.path.join(model_dir, f"{file_name}.keras"))
+            print(f"Model saved as {file_name}.keras")
+
+        except Exception as e:
+            print(f"Error: {e}")
+            print("Please check the dataset and try again.")
+            return
 
     def testMode(self, data_dir, model_dir):
-        # Import here instead of at top
         import numpy as np
-        # Get test data
+        
+        # dataset submenu
         print("1. Process dataset")
         print("2. Load processed dataset (.npz)")
         choice = int(input("Please select a valid option (1-2): "))
+
         if choice == 1:     
             test_images, test_labels = self.DatasetLoader.dataDirCheck(data_dir)
             if test_images is None or test_labels is None:
@@ -83,13 +93,15 @@ class Main():
             if not os.path.exists(data_dir):
                 print(f"Error: Training directory not found at {data_dir}")
                 return
+            
         elif choice == 2:
             test_images, test_labels = self.DatasetLoader.npzCheck(data_dir)
+
         else:
             print("Invalid choice. Please select a number between 1 and 2.")
             return
         
-        # Get model file paths
+        # get model file paths
         print("Available models:")
         model_files = [f for f in os.listdir(model_dir) if f.endswith('.keras')]
         if not model_files:
@@ -98,19 +110,18 @@ class Main():
             
         for i, file in enumerate(model_files):
             print(f"{i+1}. {file}")
-        
         model_idx = int(input("Select model number: ")) - 1
         if model_idx < 0 or model_idx >= len(model_files):
             print("Invalid selection. Exiting test mode.")            
             return
         model_path = os.path.join(model_dir, model_files[model_idx])
         
-        # Load the model
+        # load model
         print("Loading model...")
         model = Model()
         model.load_model(model_path)
         
-        # Evaluate model
+        # evaluate model accuracy
         print("Evaluating model...")
         model.accuracy(test_images, test_labels)
 
@@ -126,6 +137,7 @@ class Main():
 main = Main()
 if __name__ == "__main__":
     while True:
+        # main menu loop
         print("Welcome to Max's TensorFlow OCR!")
         print("1. Train a new model")
         print("2. Test an existing model")
@@ -137,13 +149,17 @@ if __name__ == "__main__":
         if choice == '1':
             main.trainingMode(main.data_dir, main.model_dir)
             print("Returning to main menu...")
+            time.sleep(3)
 
         elif choice == '2':
             main.testMode(main.data_dir, main.model_dir)
             print("Returning to main menu...")
+            time.sleep(3)
 
         elif choice == '3':
             main.CharacterImageGenerator.generateImages()
+            print("Returning to main menu...")
+            time.sleep(3)
 
         elif choice == '4':
             print("Exiting program...")
@@ -151,4 +167,5 @@ if __name__ == "__main__":
 
         else:
             print("Invalid choice. Please select a number between 1 and 3.")
+            time.sleep(3)
             continue

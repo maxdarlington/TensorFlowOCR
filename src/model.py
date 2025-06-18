@@ -1,9 +1,11 @@
 import tensorflow as tf 
+from tensorflow import keras
 from keras.models import Sequential
 from keras.layers import Conv2D, Flatten, MaxPooling2D, Dense
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
+from keras._tf_keras.keras.preprocessing.image import ImageDataGenerator
 
 class Model:
     def __init__(self):
@@ -36,6 +38,15 @@ class Model:
         self.label_to_idx = {label: idx for idx, label in enumerate(self.valid_labels)}
         self.idx_to_label = {idx: label for label, idx in self.label_to_idx.items()}
 
+        # Data augmentation
+        self.datagen = ImageDataGenerator(
+            rotation_range=20,  # +-20 degrees
+            width_shift_range=0.1,
+            height_shift_range=0.1,
+            zoom_range=0.1,
+            fill_mode='nearest'
+        )
+
     def train(self, images_sh, labels_sh):
         # Convert labels to proper format and encode them
         str_labels = [str(label).upper() for label in labels_sh]
@@ -54,12 +65,17 @@ class Model:
             print("Invalid input. Please enter a number. Defaulting to 10.")
             epoch_input = 10
 
-        self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-        history = self.model.fit(filtered_images, encoded_labels, validation_split=0.2, 
-                           batch_size=16, epochs=epoch_input, verbose=1)
-        print("Training completed.")
-        self.model.summary()
-        return history
+        try:
+            self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+            history = self.model.fit(filtered_images, encoded_labels, validation_split=0.2, 
+                            batch_size=16, epochs=epoch_input, verbose=1)
+            print("Training completed.")
+            self.model.summary()
+            return history
+        
+        except Exception as e:
+            print(f"Error during training: {e}")
+            return None
     
     def accuracy(self, test_images, test_labels):
         # Use same encoding as training
