@@ -164,55 +164,59 @@ class CharacterImageGenerator:
                 total_images += 1
         
         print(f"Total images to generate: {total_images}")
-        
-        # Determine optimal number of processes
-        num_processes = min(mp.cpu_count(), 8)
-        batch_size = max(1, len(all_tasks) // (num_processes * 4))
-        
-        print(f"Using {num_processes} processes with batch size {batch_size}")
-        
-        # Split tasks into batches
-        batches = [all_tasks[i:i + batch_size] for i in range(0, len(all_tasks), batch_size)]
-        
-        # Process batches in parallel
-        successful_images = 0
-        
-        try:
-            with ProcessPoolExecutor(max_workers=num_processes) as executor:
-                # Submit all batches
-                future_to_batch = {
-                    executor.submit(self._process_batch, batch): batch 
-                    for batch in batches
-                }
-                
-                # Collect results with progress tracking
-                completed = 0
-                for future in as_completed(future_to_batch):
-                    batch_results = future.result()
-                    successful_images += sum(batch_results)
-                    completed += 1
-                    
-                    # Progress update every 10% or every 10 batches
-                    if completed % max(1, len(batches) // 10) == 0 or completed % 10 == 0:
-                        progress = (completed / len(batches)) * 100
-                        elapsed = time.time() - start_time
-                        print(f"Progress: {progress:.1f}% ({completed}/{len(batches)} batches) - {elapsed:.1f}s elapsed")
-        
-        except Exception as e:
-            print(f"Multiprocessing failed: {e}")
-            print("Falling back to single-threaded processing...")
-            
-            # Fallback to single-threaded processing
+
+        # Use single-threaded processing for small task sets
+        if len(all_tasks) <= 100:
+            print("Small task set detected (<=100 tasks). Using single-threaded processing.")
+            successful_images = 0
             for i, task in enumerate(all_tasks):
                 result = create_character_image_worker(task)
                 if result:
                     successful_images += 1
-                
-                # Progress update every 100 images
-                if (i + 1) % 100 == 0:
+                # Progress update every 10 images
+                if (i + 1) % 10 == 0 or (i + 1) == len(all_tasks):
                     progress = ((i + 1) / len(all_tasks)) * 100
                     elapsed = time.time() - start_time
                     print(f"Progress: {progress:.1f}% ({i + 1}/{len(all_tasks)} images) - {elapsed:.1f}s elapsed")
+        else:
+            # Determine optimal number of processes
+            num_processes = min(mp.cpu_count(), 8)
+            batch_size = max(1, len(all_tasks) // (num_processes * 4))
+            print(f"Using {num_processes} processes with batch size {batch_size}")
+            # Split tasks into batches
+            batches = [all_tasks[i:i + batch_size] for i in range(0, len(all_tasks), batch_size)]
+            # Process batches in parallel
+            successful_images = 0
+            try:
+                with ProcessPoolExecutor(max_workers=num_processes) as executor:
+                    # Submit all batches
+                    future_to_batch = {
+                        executor.submit(self._process_batch, batch): batch 
+                        for batch in batches
+                    }
+                    # Collect results with progress tracking
+                    completed = 0
+                    for future in as_completed(future_to_batch):
+                        batch_results = future.result()
+                        successful_images += sum(batch_results)
+                        completed += 1
+                        # Progress update every 10% or every 10 batches
+                        if completed % max(1, len(batches) // 10) == 0 or completed % 10 == 0:
+                            progress = (completed / len(batches)) * 100
+                            elapsed = time.time() - start_time
+                            print(f"Progress: {progress:.1f}% ({completed}/{len(batches)} batches) - {elapsed:.1f}s elapsed")
+            except Exception as e:
+                print(f"Multiprocessing failed: {e}")
+                print("Falling back to single-threaded processing...")
+                for i, task in enumerate(all_tasks):
+                    result = create_character_image_worker(task)
+                    if result:
+                        successful_images += 1
+                    # Progress update every 100 images
+                    if (i + 1) % 100 == 0:
+                        progress = ((i + 1) / len(all_tasks)) * 100
+                        elapsed = time.time() - start_time
+                        print(f"Progress: {progress:.1f}% ({i + 1}/{len(all_tasks)} images) - {elapsed:.1f}s elapsed")
         
         total_time = time.time() - start_time
         print(f"Generated {successful_images}/{total_images} images in {total_time:.2f} seconds")
