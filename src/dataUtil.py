@@ -3,7 +3,6 @@ from PIL import Image
 import numpy as np
 from sklearn.utils import shuffle
 import multiprocessing as mp
-from functools import partial
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
@@ -98,57 +97,62 @@ class DatasetLoader:
         
         print(f"Found {len(image_paths)} images. Processing...")
         start_time = time.time()
-        
-        # Try multiprocessing first, fallback to single-threaded if it fails
-        try:
-            # Determine optimal number of processes
-            num_processes = min(mp.cpu_count(), 8)  # Cap at 8 processes to avoid overhead
-            batch_size = max(1, len(image_paths) // (num_processes * 4))  # Ensure reasonable batch sizes
-            
-            print(f"Using {num_processes} processes with batch size {batch_size}")
-            
-            # Split image paths into batches
-            batches = [image_paths[i:i + batch_size] for i in range(0, len(image_paths), batch_size)]
-            
-            all_results = []
-            
-            # Process batches in parallel
-            with ProcessPoolExecutor(max_workers=num_processes) as executor:
-                # Submit all batches
-                future_to_batch = {
-                    executor.submit(process_image_batch, batch): batch 
-                    for batch in batches
-                }
-                
-                # Collect results with progress tracking
-                completed = 0
-                for future in as_completed(future_to_batch):
-                    batch_results = future.result()
-                    all_results.extend(batch_results)
-                    completed += 1
-                    
-                    # Progress update every 10% or every 10 batches
-                    if completed % max(1, len(batches) // 10) == 0 or completed % 10 == 0:
-                        progress = (completed / len(batches)) * 100
-                        elapsed = time.time() - start_time
-                        print(f"Progress: {progress:.1f}% ({completed}/{len(batches)} batches) - {elapsed:.1f}s elapsed")
-        
-        except Exception as e:
-            print(f"Multiprocessing failed: {e}")
-            print("Falling back to single-threaded processing...")
-            
-            # Fallback to single-threaded processing
+
+        # Use single-threaded processing for small datasets
+        if len(image_paths) <= 100:
+            print("Small dataset detected (<=100 images). Using single-threaded processing.")
             all_results = []
             for i, image_path in enumerate(image_paths):
                 img_array, label = process_single_image(image_path)
                 if img_array is not None:
                     all_results.append((img_array, label))
-                
-                # Progress update every 100 images
-                if (i + 1) % 100 == 0:
+                # Progress update every 10 images
+                if (i + 1) % 10 == 0 or (i + 1) == len(image_paths):
                     progress = ((i + 1) / len(image_paths)) * 100
                     elapsed = time.time() - start_time
                     print(f"Progress: {progress:.1f}% ({i + 1}/{len(image_paths)} images) - {elapsed:.1f}s elapsed")
+        else:
+            # Try multiprocessing first, fallback to single-threaded if it fails
+            try:
+                # Determine optimal number of processes
+                num_processes = min(mp.cpu_count(), 8)  # Cap at 8 processes to avoid overhead
+                batch_size = max(1, len(image_paths) // (num_processes * 4))  # Ensure reasonable batch sizes
+                print(f"Using {num_processes} processes with batch size {batch_size}")
+                # Split image paths into batches
+                batches = [image_paths[i:i + batch_size] for i in range(0, len(image_paths), batch_size)]
+                all_results = []
+                # Process batches in parallel
+                with ProcessPoolExecutor(max_workers=num_processes) as executor:
+                    # Submit all batches
+                    future_to_batch = {
+                        executor.submit(process_image_batch, batch): batch 
+                        for batch in batches
+                    }
+                    # Collect results with progress tracking
+                    completed = 0
+                    for future in as_completed(future_to_batch):
+                        batch_results = future.result()
+                        all_results.extend(batch_results)
+                        completed += 1
+                        # Progress update every 10% or every 10 batches
+                        if completed % max(1, len(batches) // 10) == 0 or completed % 10 == 0:
+                            progress = (completed / len(batches)) * 100
+                            elapsed = time.time() - start_time
+                            print(f"Progress: {progress:.1f}% ({completed}/{len(batches)} batches) - {elapsed:.1f}s elapsed")
+            except Exception as e:
+                print(f"Multiprocessing failed: {e}")
+                print("Falling back to single-threaded processing...")
+                # Fallback to single-threaded processing
+                all_results = []
+                for i, image_path in enumerate(image_paths):
+                    img_array, label = process_single_image(image_path)
+                    if img_array is not None:
+                        all_results.append((img_array, label))
+                    # Progress update every 100 images
+                    if (i + 1) % 100 == 0:
+                        progress = ((i + 1) / len(image_paths)) * 100
+                        elapsed = time.time() - start_time
+                        print(f"Progress: {progress:.1f}% ({i + 1}/{len(image_paths)} images) - {elapsed:.1f}s elapsed")
         
         # Separate images and labels
         if not all_results:
