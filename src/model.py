@@ -1,11 +1,10 @@
-import tensorflow as tf 
-from tensorflow import keras
-from keras.models import Sequential
-from keras.layers import Conv2D, Flatten, MaxPooling2D, Dense
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
-from keras._tf_keras.keras.preprocessing.image import ImageDataGenerator
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, Flatten, MaxPooling2D, Dense
 
 class Model:
     def __init__(self):
@@ -37,7 +36,6 @@ class Model:
         self.model.add(Dense(units=128, activation='relu'))
         self.model.add(Dense(units=64, activation='relu'))
         self.model.add(Dense(units=len(self.valid_labels), activation='softmax'))
-        self.le = LabelEncoder()
 
         # Data augmentation
         self.datagen = ImageDataGenerator(
