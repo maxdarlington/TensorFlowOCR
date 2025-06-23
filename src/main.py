@@ -1,5 +1,6 @@
-from model import Model
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow INFO and WARNING messages
+from model import Model
 import sys
 import time
 
@@ -31,7 +32,13 @@ class Main():
         # dataset submenu
         print("1. Process dataset")
         print("2. Load processed dataset (.npz)")
-        choice = int(input("Please select a valid option (1-2): "))
+
+        try:
+            user_input = input("Please select a valid option (1-2): ")
+            choice = int(user_input)
+        except ValueError:
+            print("Invalid input. Please enter a number between 1 and 2.")
+            return
 
         if choice == 1:     
             train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
