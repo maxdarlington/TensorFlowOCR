@@ -8,6 +8,20 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 
+def foldername_to_label(folder_name):
+    if folder_name.startswith('upper'):
+        return folder_name[-1].upper()
+    elif folder_name.startswith('lower'):
+        return folder_name[-1].lower()
+    symbol_map = {
+        'at': '@', 'exclmark': '!', 'hash': '#', 'dollar': '$', 'percent': '%',
+        'ampersand': '&', 'asterisk': '*', 'plus': '+', 'minus': '-', 'quesmark': '?',
+        'lessthan': '<', 'greaterthan': '>'
+    }
+    if folder_name in symbol_map:
+        return symbol_map[folder_name]
+    return folder_name  # for digits
+
 def process_single_image(image_path):
     """Standalone function for processing a single image (for multiprocessing)"""
     try:
@@ -21,7 +35,9 @@ def process_single_image(image_path):
             
             # Convert to numpy array and normalize
             img_array = np.array(img, dtype=np.float32) / 255.0
-            return img_array, os.path.basename(os.path.dirname(image_path))
+            folder_name = os.path.basename(os.path.dirname(image_path))
+            label = foldername_to_label(folder_name)
+            return img_array, label
     
     except Exception as e:
         print(f"Error processing image {image_path}: {str(e)}")

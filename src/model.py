@@ -9,6 +9,16 @@ from keras._tf_keras.keras.preprocessing.image import ImageDataGenerator
 
 class Model:
     def __init__(self):
+        # Create consistent label mapping
+        nums = [str(i) for i in range(10)]  # 0-9
+        upper_chars = [chr(i) for i in range(65, 91)]  # A-Z
+        lower_chars = [chr(i) for i in range(97, 123)]  # a-z
+        symbols = ['!', '@', '#', '$', '%', '&', '*', '+', '-', '?', '<', '>']
+        self.valid_labels = nums + upper_chars + lower_chars + symbols
+
+        # Create a fixed mapping dictionary
+        self.label_to_idx = {label: idx for idx, label in enumerate(self.valid_labels)}
+        self.idx_to_label = {idx: label for label, idx in self.label_to_idx.items()}
         self.model = Sequential()
         # First convolutional block
         self.model.add(Conv2D(filters=32, kernel_size=(3,3), activation='relu', input_shape=(28,28,1), padding='same'))
@@ -26,17 +36,8 @@ class Model:
         self.model.add(Flatten())
         self.model.add(Dense(units=128, activation='relu'))
         self.model.add(Dense(units=64, activation='relu'))
-        self.model.add(Dense(units=36, activation='softmax'))
+        self.model.add(Dense(units=len(self.valid_labels), activation='softmax'))
         self.le = LabelEncoder()
-        self.label_dict = {}  # Add dictionary to store label mappings
-        
-        # Create consistent label mapping
-        nums = [str(i) for i in range(10)]  # 0-9
-        chars = [chr(i) for i in range(65, 91)]  # A-Z
-        self.valid_labels = nums + chars
-        # Create a fixed mapping dictionary
-        self.label_to_idx = {label: idx for idx, label in enumerate(self.valid_labels)}
-        self.idx_to_label = {idx: label for label, idx in self.label_to_idx.items()}
 
         # Data augmentation
         self.datagen = ImageDataGenerator(
@@ -49,7 +50,7 @@ class Model:
 
     def train(self, images_sh, labels_sh):
         # Convert labels to proper format and encode them
-        str_labels = [str(label).upper() for label in labels_sh]
+        str_labels = [str(label) for label in labels_sh]
         encoded_labels = np.array([self.label_to_idx[label] for label in str_labels if label in self.valid_labels])
         
         # Filter corresponding images to match valid labels
@@ -79,7 +80,7 @@ class Model:
     
     def accuracy(self, test_images, test_labels):
         # Use same encoding as training
-        str_labels = [str(label).upper() for label in test_labels]
+        str_labels = [str(label) for label in test_labels]
         valid_indices = [i for i, label in enumerate(str_labels) if label in self.valid_labels]
         
         # Check if we have any valid labels
