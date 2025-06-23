@@ -1,6 +1,5 @@
-tensorflow>=2.0.0
-numpy>=1.19.2
-matplotlib>=3.3.2
-scikit-learn>=0.24.0
-pillow>=8.0.0
-keras>=2.0.0
+numpy
+matplotlib
+scikit-learn
+tensorflow
+Pillow
