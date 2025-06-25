@@ -166,15 +166,19 @@ class Main():
                         break
 
                 elif user_input == 2:
+                    start = time()
                     for i in range(20):
+                        print("Testing model...")
                         result = model.result(test_images, test_labels, i)
                         if save_csv and result:
                             results.append(result)
+                    end = time()
+                    print(f"Elapsed time : {end - start}")
                             
                     if save_csv and results:
                         results_dir = os.path.join("content", "data", "results")
                         os.makedirs(results_dir, exist_ok=True)
-                        csv_path = os.path.join(results_dir, input("Enter CSV file name to save results (e.g., results.csv): ").strip())
+                        csv_path = os.path.join(results_dir, input("Enter CSV file name to save results without extension (e.g., results): ", ".csv").strip())
                         save_results_to_csv(results, csv_path)
                         results.clear()
                         break
