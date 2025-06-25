@@ -3,6 +3,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow INFO and WARNING
 from model import Model
 import sys
 import time
+import random
+from dataUtil import save_results_to_csv
 
 class Main():
     def __init__(self):
@@ -110,36 +112,79 @@ class Main():
         
         # get model file paths
         print("Available models:")
-        model_files = [f for f in os.listdir(model_dir) if f.endswith('.keras')]
+        model_files = sorted([f for f in os.listdir(model_dir) if f.endswith('.keras')])
         if not model_files:
             print("No models found. Exiting test mode.")
             return
             
         for i, file in enumerate(model_files):
             print(f"{i+1}. {file}")
-        model_idx = int(input("Select model number: ")) - 1
-        if model_idx < 0 or model_idx >= len(model_files):
-            print("Invalid selection. Exiting test mode.")            
+        
+        try:
+            model_choice = input(f"Please select a model (1-{len(model_files)}): ")
+            model_idx = int(model_choice) - 1
+            
+            if model_idx < 0 or model_idx >= len(model_files):
+                print("Invalid selection. Exiting test mode.")            
+                return
+                
+        except Exception as e:
+            print(f"Error: {e}")
             return
+            
         model_path = os.path.join(model_dir, model_files[model_idx])
         
         # load model
         print("Loading model...")
         model = Model()
         model.load_model(model_path)
-        
-        # evaluate model accuracy
-        print("Evaluating model...")
-        model.accuracy(test_images, test_labels)
 
-        if len(test_images) <= 10:
-            for i in range(len(test_images)):
-                model.plot_prediction(test_images, i)
+        print("1. Visualise test cases")
+        print("2. Automate test cases")
 
-        else:
-            for i in range(10):
-                idx = np.random.randint(0, len(test_images))
-                model.plot_prediction(test_images, idx)
+        while True:
+            user_input = int(input("Please select a valid option (1-2)"))
+            save_csv = input("Save results to CSV? (y/n): ").strip().lower() == 'y'
+            results = []
+
+            try:
+                if user_input == 1:
+                    num = int(input("How many test cases to visualise?: "))
+                    for i in range(num):
+                        randidx = random.randint(0, len(test_images) - 1)
+                        result = model.result(test_images, test_labels, randidx)
+                        predicted_label = model.predict(test_images[randidx])
+                        model.plot(test_images[randidx], predicted_label)
+
+                        if save_csv and result:
+                            results.append(result)
+                            
+                    if save_csv and results:
+                        csv_path = os.path.join("content", "results")
+                        save_results_to_csv(results, csv_path)
+                        results.clear()
+                        break
+
+                elif user_input == 2:
+                    for i in range(20):
+                        result = model.result(test_images, test_labels, i)
+                        if save_csv and result:
+                            results.append(result)
+                            
+                    if save_csv and results:
+                        results_dir = os.path.join("content", "data", "results")
+                        os.makedirs(results_dir, exist_ok=True)
+                        csv_path = os.path.join(results_dir, input("Enter CSV file name to save results (e.g., results.csv): ").strip())
+                        save_results_to_csv(results, csv_path)
+                        results.clear()
+                        break
+                
+                else:
+                    print("Invalid option. Please select 1 or 2.")
+                    
+            except Exception as e:
+                print(f"Error: {e}")
+                break
 
 main = Main()
 if __name__ == "__main__":

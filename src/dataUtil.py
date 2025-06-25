@@ -6,6 +6,7 @@ import multiprocessing as mp
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
+import csv
 
 def foldername_to_label(folder_name):
     if folder_name.startswith('upper'):
@@ -32,8 +33,9 @@ def process_single_image(image_path):
             else:
                 img = img.convert('L')
             
-            # Convert to numpy array and normalize
+            # Convert to numpy array, normalize, and add channel dimension
             img_array = np.array(img, dtype=np.float32) / 255.0
+            img_array = img_array.reshape(28, 28, 1)  # Add channel dimension for grayscale
             folder_name = os.path.basename(os.path.dirname(image_path))
             label = foldername_to_label(folder_name)
             return img_array, label
@@ -67,8 +69,9 @@ class DatasetLoader:
                 else:
                     img = img.convert('L')
                 
-                # Convert to numpy array and normalize
+                # Convert to numpy array, normalize, and add channel dimension
                 img_array = np.array(img, dtype=np.float32) / 255.0
+                img_array = img_array.reshape(28, 28, 1)  # Add channel dimension for grayscale
                 return img_array
         
         except Exception as e:
@@ -238,7 +241,7 @@ class DatasetLoader:
     def dataDirCheck(self, data_dir):
         # get available data directories
         print("Available datasets:")
-        data_dirs = [d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))]
+        data_dirs = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))])
         if not data_dirs:
             print("No datasets found.")
             return None, None
@@ -270,7 +273,7 @@ class DatasetLoader:
             return None, None
         
         # get available test data files with debug info
-        files = [file for file in os.listdir(data_dir) if file.endswith('.npz')]
+        files = sorted([file for file in os.listdir(data_dir) if file.endswith('.npz')])
         print(f"Found {len(files)} .npz files")
         
         if not files:
@@ -316,3 +319,15 @@ class DatasetLoader:
         except ValueError:
             print("Invalid input. Please enter a number.")
             return None, None
+
+def save_results_to_csv(results, csv_path):
+    """Save a list of result dictionaries to a CSV file."""
+    if not results:
+        print("No results to save.")
+        return
+    keys = results[0].keys()
+    with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(results)
+    print(f"Results saved to {csv_path}")
