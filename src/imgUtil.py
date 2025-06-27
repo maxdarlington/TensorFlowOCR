@@ -18,8 +18,8 @@ def create_character_image_worker(args):
         char_dir = os.path.join(output_base_dir, folder_name)
         os.makedirs(char_dir, exist_ok=True)
         
-        # Create image with padding to prevent cutoff
-        padding = 4
+        # Create image with padding to prevent cutoff during rotation
+        padding = 8  # Increased padding to accommodate rotation
         padded_size = (size + padding, size + padding)
         img = Image.new("L", padded_size, color="white")
         draw = ImageDraw.Draw(img)
@@ -34,9 +34,14 @@ def create_character_image_worker(args):
         # Draw the character
         draw.text(position, char, fill="black", font=font)
         
-        # Crop to final size
-        left = padding//2
-        top = padding//2
+        # Apply random rotation of ±20 degrees
+        rotation_angle = random.uniform(-20, 20)
+        img = img.rotate(rotation_angle, expand=True, fillcolor="white")
+        
+        # Crop to final size, ensuring we get the center portion
+        img_width, img_height = img.size
+        left = (img_width - size) // 2
+        top = (img_height - size) // 2
         right = left + size
         bottom = top + size
         img = img.crop((left, top, right, bottom))
@@ -92,7 +97,7 @@ class CharacterImageGenerator:
         os.makedirs(char_dir, exist_ok=True)
         
         # Create image with padding to prevent cutoff during rotation
-        padding = 4  # Add padding to prevent character cutoff
+        padding = 8  # Increased padding to accommodate rotation
         padded_size = (self.size + padding, self.size + padding)
         img = Image.new("L", padded_size, color="white")
         draw = ImageDraw.Draw(img)
@@ -107,9 +112,14 @@ class CharacterImageGenerator:
         # Draw the character
         draw.text(position, char, fill="black", font=font)
         
-        # Crop to final size
-        left = padding//2
-        top = padding//2
+        # Apply random rotation of ±20 degrees
+        rotation_angle = random.uniform(-20, 20)
+        img = img.rotate(rotation_angle, expand=True, fillcolor="white")
+        
+        # Crop to final size, ensuring we get the center portion
+        img_width, img_height = img.size
+        left = (img_width - self.size) // 2
+        top = (img_height - self.size) // 2
         right = left + self.size
         bottom = top + self.size
         img = img.crop((left, top, right, bottom))
