@@ -5,6 +5,59 @@ import sys
 import time
 import random
 
+def result_helper(model, num, test_images, test_labels, save_csv, results, ):
+    correct_predictions = 0
+    total_predictions = 0
+    rand_choice = get_yes_no("Randomise test case order? (y/n)")
+
+    for i in range(num):
+        try:
+            if rand_choice:
+                idx = random.randint(0, len(test_images) - 1)
+                
+            elif rand_choice == False:
+                idx = i
+
+            result = model.result(test_images, test_labels, idx)
+            predicted_label = model.predict(test_images[idx])
+            model.plot(test_images[idx], predicted_label)
+
+            if result:
+                total_predictions += 1
+                if result['correct']:
+                    correct_predictions += 1
+                
+            if save_csv and result:
+                results.append(result)
+
+        except Exception as e:
+            print(f"Error processing test case {i+1}: {e}")
+            continue
+    
+    # Calculate and display average accuracy
+    if total_predictions > 0:
+        average_accuracy = (correct_predictions / total_predictions) * 100
+        print(f"\n=== TEST RESULTS ===")
+        print(f"Total predictions: {total_predictions}")
+        print(f"Correct predictions: {correct_predictions}")
+        print(f"Average accuracy: {average_accuracy:.2f}%")
+        print("===================")
+
+def test_case_num(test_images):
+        while True:
+            try:
+                num = int(input("How many test cases to visualise?: "))
+                if num <= 0:
+                    print("Please enter a positive number.")
+                    continue
+                if num > len(test_images):
+                    print(f"Warning: You requested {num} test cases but only {len(test_images)} are available.")
+                    num = len(test_images)
+                break
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+                continue
+
 def save_to_csv(results):
     try:
         results_dir = os.path.join("content", "results")
@@ -163,90 +216,34 @@ class Main():
             print("Please check if the model file is corrupted or try a different model.")
             return
 
-        print("1. Visualise test cases")
+        print("1. Visualised test cases")
         print("2. Automate test cases")
         print("3. Return to main menu")
 
         while True:
             try:
-                user_input = int(input("Please select a valid option (1-3): "))
+                user_input = get_valid_int_input("Please select a valid option (1-2): ",1 , 2)
                 
-                if user_input not in [1, 2, 3]:
-                    print("Invalid option. Please select 1, 2, or 3.")
-                    continue
-                
-                if user_input == 3:
-                    print("Returning to main menu...")
-                    return
-                
-                # Handle CSV save option
                 save_csv = get_yes_no("Save results to CSV? (y/n): ")
                 results = []
 
                 if user_input == 1:
-                    while True:
-                        try:
-                            num = int(input("How many test cases to visualise?: "))
-                            if num <= 0:
-                                print("Please enter a positive number.")
-                                continue
-                            if num > len(test_images):
-                                print(f"Warning: You requested {num} test cases but only {len(test_images)} are available.")
-                                num = len(test_images)
-                            break
-                        except ValueError:
-                            print("Invalid input. Please enter a number.")
-                            continue
-                    
-                    correct_predictions = 0
-                    total_predictions = 0
-                    
-                    for i in range(num):
-                        try:
-                            randidx = random.randint(0, len(test_images) - 1)
-                            result = model.result(test_images, test_labels, randidx)
-                            predicted_label = model.predict(test_images[randidx])
-                            model.plot(test_images[randidx], predicted_label)
-
-                            if result:
-                                total_predictions += 1
-                                if result['correct']:
-                                    correct_predictions += 1
-                                
-                            if save_csv and result:
-                                results.append(result)
-                        except Exception as e:
-                            print(f"Error processing test case {i+1}: {e}")
-                            continue
-                    
-                    # Calculate and display average accuracy
-                    if total_predictions > 0:
-                        average_accuracy = (correct_predictions / total_predictions) * 100
-                        print(f"\n=== TEST RESULTS ===")
-                        print(f"Total predictions: {total_predictions}")
-                        print(f"Correct predictions: {correct_predictions}")
-                        print(f"Average accuracy: {average_accuracy:.2f}%")
-                        print("===================")
+                    num = test_case_num(test_images)
+                    test_case_num(model, num, test_images, test_labels, save_csv)
                             
                     if save_csv and results:
-                        try:
-                            csv_path = os.path.join("content", "results")
-                            os.makedirs(csv_path, exist_ok=True)
-                            from dataUtil import save_results_to_csv
-                            save_results_to_csv(results, csv_path)
-                            results.clear()
-                        except Exception as e:
-                            print(f"Error saving CSV: {e}")
-                    break
+                        print("Saving results to CSV...")
+                        save_to_csv(results)
+                        print("Results saved successfully.")
 
                 elif user_input == 2:
-                    print("Testing model...")
+                    num = test_case_num(test_images)                    
                     start = time.time()
                     correct_predictions = 0
                     total_predictions = 0
                     
                     try:
-                        for i in range(len(test_images)):
+                        for i in range(num):
                             result = model.result(test_images, test_labels, i)
                             if result:
                                 total_predictions += 1
@@ -268,8 +265,13 @@ class Main():
                             print("===================")
                                 
                         #add csv saving
+                        if save_csv and results:
+                            print("Saving results to CSV...")
+                            save_to_csv(results)
+                            print("Results saved successfully.")
 
                         break
+
                     except Exception as e:
                         print(f"Error during testing: {e}")
                         break
