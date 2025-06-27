@@ -4,7 +4,69 @@ from model import Model
 import sys
 import time
 import random
-from dataUtil import save_results_to_csv
+
+def save_to_csv(results):
+    try:
+        results_dir = os.path.join("content", "results")
+        os.makedirs(results_dir, exist_ok=True)
+        csv_filename = input("Enter CSV file name to save results without extension (e.g., results): ").strip()
+        if not csv_filename:
+            csv_filename = "test_results"
+        csv_path = os.path.join(results_dir, csv_filename + ".csv")
+        from dataUtil import save_results_to_csv 
+        save_results_to_csv(results, csv_path)
+        results.clear()
+    except Exception as e:
+        print(f"Error saving CSV: {e}")
+
+def get_valid_int_input(prompt, min, max):
+    while True:
+        try:
+            choice = int(input(prompt))
+            if min <= choice <= max:
+                return choice
+            else:
+                print(f"Please select a number between {min} and {max}")
+        except ValueError:
+            print("Invalid input. Please enter a numerical character")
+
+def get_yes_no(prompt):
+    while True:
+        try:
+            choice = input(prompt).lower().strip()
+            if choice in ['y', 'yes']:
+                return True
+            elif choice in ['n', 'no']:
+                return False
+            else:
+                print("Invalid choice. (y/n)")
+                continue
+        except ValueError:
+            print("Invalid choice. (y/n)")
+
+def select_model(model_dir):
+    print("Available models:")
+    model_files = sorted([f for f in os.listdir(model_dir) if f.endswith('.keras')])
+    if not model_files:
+        print("No models found. Please train a model first.")
+        return None
+
+    for i, file in enumerate(model_files):
+        print(f"{i+1}. {file}")
+
+    while True:
+        try:
+            model_choice = input(f"Please select a model (1-{len(model_files)}) or 'q' to quit: ").strip()
+            if model_choice.lower() == 'q':
+                print("Returning to main menu...")
+                return None
+            model_idx = int(model_choice) - 1
+            if model_idx < 0 or model_idx >= len(model_files):
+                print(f"Invalid selection. Please enter a number between 1 and {len(model_files)}.")
+                continue
+            return os.path.join(model_dir, model_files[model_idx])
+        except ValueError:
+            print("Invalid input. Please enter a number or 'q' to quit.")
 
 class Main():
     def __init__(self):
@@ -35,29 +97,19 @@ class Main():
         print("1. Process dataset")
         print("2. Load processed dataset (.npz)")
 
-        try:
-            user_input = input("Please select a valid option (1-2): ")
-            choice = int(user_input)
-        except ValueError:
-            print("Invalid input. Please enter a number between 1 and 2.")
-            return
+        if not os.path.exists(data_dir):
+            print(f"Training directory not found at {data_dir}. Creating directory...")
+            os.makedirs(data_dir, exist_ok=True)
 
-        if choice == 1:     
+        choice = get_valid_int_input("Please select a valid option (1-2): ", 1, 2)
+
+        if choice == 1:
             train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
-            if train_images is None or train_labels is None:
-                return
-            
-            if not os.path.exists(data_dir):
-                print(f"Error: Training directory not found at {data_dir}")
-                return
-            
         elif choice == 2:
             train_images, train_labels = self.DatasetLoader.npzCheck(data_dir)
-            if train_images is None or train_labels is None:
-                return
-            
-        else:
-            print("Invalid choice. Please select a number between 1 and 2.")
+
+        if train_images is None or train_labels is None:
+            print("Failed to load training data. Please check your dataset.")
             return
         
         # model training section
@@ -92,111 +144,146 @@ class Main():
         # dataset submenu
         print("1. Process dataset")
         print("2. Load processed dataset (.npz)")
-        choice = int(input("Please select a valid option (1-2): "))
+        print("3. Return to main menu")
 
-        if choice == 1:     
-            test_images, test_labels = self.DatasetLoader.dataDirCheck(data_dir)
-            if test_images is None or test_labels is None:
-                return
-            
-            if not os.path.exists(data_dir):
-                print(f"Error: Training directory not found at {data_dir}")
-                return
-            
-        elif choice == 2:
-            test_images, test_labels = self.DatasetLoader.npzCheck(data_dir)
+        test_images, test_labels = self.DatasetLoader.select_dataset(data_dir)
 
-        else:
-            print("Invalid choice. Please select a number between 1 and 2.")
+        model_path = select_model(model_dir)
+        if not model_path:
             return
-        
-        # get model file paths
-        print("Available models:")
-        model_files = sorted([f for f in os.listdir(model_dir) if f.endswith('.keras')])
-        if not model_files:
-            print("No models found. Exiting test mode.")
-            return
-            
-        for i, file in enumerate(model_files):
-            print(f"{i+1}. {file}")
-        
+
+        # load model with error handling
         try:
-            model_choice = input(f"Please select a model (1-{len(model_files)}): ")
-            model_idx = int(model_choice) - 1
-            
-            if model_idx < 0 or model_idx >= len(model_files):
-                print("Invalid selection. Exiting test mode.")            
-                return
-                
+            print("Loading model...")
+            model = Model()
+            model.load_model(model_path)
+            print("Model loaded successfully!")
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error loading model: {e}")
+            print("Please check if the model file is corrupted or try a different model.")
             return
-            
-        model_path = os.path.join(model_dir, model_files[model_idx])
-        
-        # load model
-        print("Loading model...")
-        model = Model()
-        model.load_model(model_path)
 
         print("1. Visualise test cases")
         print("2. Automate test cases")
+        print("3. Return to main menu")
 
         while True:
-            user_input = int(input("Please select a valid option (1-2) "))
-            save_csv = input("Save results to CSV? (y/n): ").strip().lower()
-            if save_csv == 'y':
-                save_csv = True
-            elif save_csv == 'n':
-                save_csv = False
-            else:
-                print("Invalid option. Please select (y/n).")
-
-            results = []
-
             try:
-                if user_input == 1:
-                    num = int(input("How many test cases to visualise?: "))
-                    for i in range(num):
-                        randidx = random.randint(0, len(test_images) - 1)
-                        result = model.result(test_images, test_labels, randidx)
-                        predicted_label = model.predict(test_images[randidx])
-                        model.plot(test_images[randidx], predicted_label)
+                user_input = int(input("Please select a valid option (1-3): "))
+                
+                if user_input not in [1, 2, 3]:
+                    print("Invalid option. Please select 1, 2, or 3.")
+                    continue
+                
+                if user_input == 3:
+                    print("Returning to main menu...")
+                    return
+                
+                # Handle CSV save option
+                save_csv = get_yes_no("Save results to CSV? (y/n): ")
+                results = []
 
-                        if save_csv and result:
-                            results.append(result)
+                if user_input == 1:
+                    while True:
+                        try:
+                            num = int(input("How many test cases to visualise?: "))
+                            if num <= 0:
+                                print("Please enter a positive number.")
+                                continue
+                            if num > len(test_images):
+                                print(f"Warning: You requested {num} test cases but only {len(test_images)} are available.")
+                                num = len(test_images)
+                            break
+                        except ValueError:
+                            print("Invalid input. Please enter a number.")
+                            continue
+                    
+                    correct_predictions = 0
+                    total_predictions = 0
+                    
+                    for i in range(num):
+                        try:
+                            randidx = random.randint(0, len(test_images) - 1)
+                            result = model.result(test_images, test_labels, randidx)
+                            predicted_label = model.predict(test_images[randidx])
+                            model.plot(test_images[randidx], predicted_label)
+
+                            if result:
+                                total_predictions += 1
+                                if result['correct']:
+                                    correct_predictions += 1
+                                
+                            if save_csv and result:
+                                results.append(result)
+                        except Exception as e:
+                            print(f"Error processing test case {i+1}: {e}")
+                            continue
+                    
+                    # Calculate and display average accuracy
+                    if total_predictions > 0:
+                        average_accuracy = (correct_predictions / total_predictions) * 100
+                        print(f"\n=== TEST RESULTS ===")
+                        print(f"Total predictions: {total_predictions}")
+                        print(f"Correct predictions: {correct_predictions}")
+                        print(f"Average accuracy: {average_accuracy:.2f}%")
+                        print("===================")
                             
                     if save_csv and results:
-                        csv_path = os.path.join("content", "results")
-                        save_results_to_csv(results, csv_path)
-                        results.clear()
+                        try:
+                            csv_path = os.path.join("content", "results")
+                            os.makedirs(csv_path, exist_ok=True)
+                            from dataUtil import save_results_to_csv
+                            save_results_to_csv(results, csv_path)
+                            results.clear()
+                        except Exception as e:
+                            print(f"Error saving CSV: {e}")
                     break
 
                 elif user_input == 2:
                     print("Testing model...")
                     start = time.time()
-                    for i in range(20):
-                        result = model.result(test_images, test_labels, i)
-                        if save_csv and result:
-                            results.append(result)
-                    end = time.time()
-                    print(f"Elapsed time : {round(end - start, 2)}s")
-                            
-                    if save_csv and results:
-                        results_dir = os.path.join("content", "results")
-                        os.makedirs(results_dir, exist_ok=True)
-                        csv_filename = input("Enter CSV file name to save results without extension (e.g., results): ").strip()
-                        csv_path = os.path.join(results_dir, csv_filename + ".csv")
-                        save_results_to_csv(results, csv_path)
-                        results.clear()
+                    correct_predictions = 0
+                    total_predictions = 0
+                    
+                    try:
+                        for i in range(len(test_images)):
+                            result = model.result(test_images, test_labels, i)
+                            if result:
+                                total_predictions += 1
+                                if result['correct']:
+                                    correct_predictions += 1
+                                    
+                            if save_csv and result:
+                                results.append(result)
+                        end = time.time()
+                        print(f"Elapsed time: {round(end - start, 2)}s")
+                        
+                        # Calculate and display average accuracy
+                        if total_predictions > 0:
+                            average_accuracy = (correct_predictions / total_predictions) * 100
+                            print(f"\n=== TEST RESULTS ===")
+                            print(f"Total predictions: {total_predictions}")
+                            print(f"Correct predictions: {correct_predictions}")
+                            print(f"Average accuracy: {average_accuracy:.2f}%")
+                            print("===================")
+                                
+                        #add csv saving
+
+                        break
+                    except Exception as e:
+                        print(f"Error during testing: {e}")
                         break
                 
-                else:
-                    print("Invalid option. Please select 1 or 2.")
-                    
+            except ValueError:
+                print("Invalid input. Please enter a number between 1 and 3.")
+                continue
+            except KeyboardInterrupt:
+                print("\nOperation cancelled by user.")
+                return
             except Exception as e:
-                print(f"Error: {e}")
-                break
+                print(f"Unexpected error: {e}")
+                print("Please try again or select option 3 to return to main menu.")
+                continue
 
 main = Main()
 if __name__ == "__main__":
@@ -212,18 +299,12 @@ if __name__ == "__main__":
 
         if choice == '1':
             main.trainingMode(main.data_dir, main.model_dir)
-            print("Returning to main menu...")
-            time.sleep(3)
 
         elif choice == '2':
             main.testMode(main.data_dir, main.model_dir)
-            print("Returning to main menu...")
-            time.sleep(3)
 
         elif choice == '3':
             main.CharacterImageGenerator.generateImages()
-            print("Returning to main menu...")
-            time.sleep(3)
 
         elif choice == '4':
             print("Exiting program...")
@@ -231,5 +312,4 @@ if __name__ == "__main__":
 
         else:
             print("Invalid choice. Please select a number between 1 and 3.")
-            time.sleep(3)
             continue
