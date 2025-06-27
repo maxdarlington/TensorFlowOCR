@@ -143,8 +143,15 @@ class Main():
         print("2. Automate test cases")
 
         while True:
-            user_input = int(input("Please select a valid option (1-2)"))
-            save_csv = input("Save results to CSV? (y/n): ").strip().lower() == 'y'
+            user_input = int(input("Please select a valid option (1-2) "))
+            save_csv = input("Save results to CSV? (y/n): ").strip().lower()
+            if save_csv == 'y':
+                save_csv = True
+            elif save_csv == 'n':
+                save_csv = False
+            else:
+                print("Invalid option. Please select (y/n).")
+
             results = []
 
             try:
@@ -163,22 +170,23 @@ class Main():
                         csv_path = os.path.join("content", "results")
                         save_results_to_csv(results, csv_path)
                         results.clear()
-                        break
+                    break
 
                 elif user_input == 2:
-                    start = time()
+                    print("Testing model...")
+                    start = time.time()
                     for i in range(20):
-                        print("Testing model...")
                         result = model.result(test_images, test_labels, i)
                         if save_csv and result:
                             results.append(result)
-                    end = time()
-                    print(f"Elapsed time : {end - start}")
+                    end = time.time()
+                    print(f"Elapsed time : {round(end - start, 2)}s")
                             
                     if save_csv and results:
-                        results_dir = os.path.join("content", "data", "results")
+                        results_dir = os.path.join("content", "results")
                         os.makedirs(results_dir, exist_ok=True)
-                        csv_path = os.path.join(results_dir, input("Enter CSV file name to save results without extension (e.g., results): ", ".csv").strip())
+                        csv_filename = input("Enter CSV file name to save results without extension (e.g., results): ").strip()
+                        csv_path = os.path.join(results_dir, csv_filename + ".csv")
                         save_results_to_csv(results, csv_path)
                         results.clear()
                         break

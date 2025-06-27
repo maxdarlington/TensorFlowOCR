@@ -66,7 +66,7 @@ class CharacterImageGenerator:
         # Settings
         self.size = 28
         self.img_size = (self.size, self.size)
-        self.font_size = 32
+        self.font_size = 28
 
         # Define the base output and fonts directories
         root_dir = os.path.dirname(os.path.dirname(__file__))
