@@ -1,5 +1,6 @@
-numpy
-matplotlib
-scikit-learn
-tensorflow
-Pillow
+# Python 3.11 recommended
+numpy>=1.21.0
+matplotlib>=3.4.0
+scikit-learn>=0.24.0
+tensorflow>=2.8.0
+Pillow>=8.0.0
