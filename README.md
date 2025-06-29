@@ -20,6 +20,7 @@ A comprehensive Optical Character Recognition (OCR) system built with TensorFlow
 ## Installation
 
 1. **Clone the repository**:
+
    **Command Prompt:**
 
    ```cmd
@@ -27,7 +28,8 @@ A comprehensive Optical Character Recognition (OCR) system built with TensorFlow
    cd TensorFlowOCR
    ```
 
-2. **Install dependencies**:
+3. **Install dependencies**:
+
    **Command Prompt:**
 
    ```cmd
