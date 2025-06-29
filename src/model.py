@@ -57,26 +57,102 @@ class Model:
         valid_indices = [i for i, label in enumerate(str_labels) if label in self.valid_labels]
         filtered_images = images_sh[valid_indices]
         
-        epoch_input = int(input("Enter the number of learning cycles for training: "))
-        try:
-            if epoch_input <= 0:
-                print("Invalid input. Defaulting to 10.")
-                epoch_input = 10
-        except ValueError:
-            print("Invalid input. Please enter a number. Defaulting to 10.")
-            epoch_input = 10
+        print("\n" + "-" * 40)
+        print("TRAINING CONFIGURATION")
+        print("-" * 40)
+        
+        # Calculate optimal epochs based on dataset size
+        dataset_size = len(filtered_images)
+        optimal_epochs = self._calculate_optimal_epochs(dataset_size)
+        
+        print(f"[INFO] Dataset size: {dataset_size:,} samples")
+        print(f"[INFO] Optimal epochs: {optimal_epochs}")
+        print("-" * 40)
+        print("1. Use optimal epochs (recommended)")
+        print("2. Enter custom number of epochs")
+        print("-" * 40)
+        
+        while True:
+            try:
+                choice = input("Select option (1-2): ").strip()
+                
+                if choice == '1':
+                    epoch_input = optimal_epochs
+                    print(f"[INFO] Using optimal epochs: {epoch_input}")
+                    break
+                elif choice == '2':
+                    epoch_input = self._get_custom_epochs()
+                    break
+                else:
+                    print("[ERROR] Please enter 1 or 2.")
+                    continue
+                    
+            except KeyboardInterrupt:
+                print("\n[WARNING] Operation cancelled by user.")
+                return None
+            except EOFError:
+                print("\n[WARNING] End of input detected.")
+                return None
 
         try:
             self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+            print(f"\n[INFO] Starting training with {epoch_input} epochs...")
             history = self.model.fit(filtered_images, encoded_labels, validation_split=0.2, 
                             batch_size=16, epochs=epoch_input, verbose=1)
-            print("Training completed.")
+            print("[SUCCESS] Training completed.")
             self.model.summary()
             return history
         
         except Exception as e:
-            print(f"Error during training: {e}")
+            print(f"[ERROR] Error during training: {e}")
             return None
+    
+    def _calculate_optimal_epochs(self, dataset_size):
+        """Calculate optimal number of epochs based on dataset size"""
+        if dataset_size < 1000:
+            return 20
+        elif dataset_size < 5000:
+            return 15
+        elif dataset_size < 10000:
+            return 12
+        elif dataset_size < 20000:
+            return 10
+        else:
+            return 8
+    
+    def _get_custom_epochs(self):
+        """Get custom number of epochs from user with proper error handling"""
+        while True:
+            try:
+                epoch_input = input("Enter the number of learning cycles for training: ").strip()
+                
+                if not epoch_input:
+                    print("[ERROR] Please enter a number.")
+                    continue
+                
+                epoch_input = int(epoch_input)
+                
+                if epoch_input <= 0:
+                    print("[ERROR] Please enter a positive number.")
+                    continue
+                
+                if epoch_input > 100:
+                    print(f"[WARNING] {epoch_input} epochs is quite high. This may take a long time.")
+                    confirm = input("Continue anyway? (y/n): ").strip().lower()
+                    if confirm not in ['y', 'yes']:
+                        continue
+                
+                return epoch_input
+                
+            except ValueError:
+                print(f"[ERROR] Invalid input: '{epoch_input}'. Please enter a number.")
+                continue
+            except KeyboardInterrupt:
+                print("\n[WARNING] Operation cancelled by user.")
+                raise
+            except EOFError:
+                print("\n[WARNING] End of input detected.")
+                raise
     
     def result(self, test_images, test_labels, idx):
         # Use same encoding as training
@@ -106,13 +182,6 @@ class Model:
         actual_label = str_labels[valid_indices[idx]]
         correct = actual_label == predicted_label
         confidence = float(test_accuracy)
-        
-        # Print for interactive use
-        # print(f"Results:")
-        # print(f"  Actual Label: {actual_label}")
-        # print(f"  Predicted Label: {predicted_label}")
-        # print(f"  Correct: {correct}")
-        # print(f"  Confidence: {confidence:.2%}")
         
         # Return result as a dictionary for CSV saving
         return {

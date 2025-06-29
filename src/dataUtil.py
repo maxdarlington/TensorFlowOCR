@@ -7,6 +7,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 import csv
+
 def save_results_to_csv(results, csv_path):
     """Save a list of result dictionaries to a CSV file."""
     if not results:
@@ -102,19 +103,23 @@ class DatasetLoader:
     
     def load_dataset(self, data_dir):
         """Optimized dataset loading with multiprocessing"""
-        print("Scanning for image files...")
+        print("\n" + "-" * 40)
+        print("DATASET PROCESSING")
+        print("-" * 40)
+        print("[INFO] Scanning for image files...")
+        
         image_paths = self.get_all_image_paths(data_dir)
         
         if not image_paths:
-            print("No image files found!")
+            print("[ERROR] No image files found in the specified directory!")
             return None, None
         
-        print(f"Found {len(image_paths)} images. Processing...")
+        print(f"[INFO] Found {len(image_paths):,} images. Processing...")
         start_time = time.time()
 
         # Use single-threaded processing for small datasets
-        if len(image_paths) <= 100:
-            print("Small dataset detected (<=100 images). Using single-threaded processing.")
+        if len(image_paths) <= 1000:
+            print("[INFO] Small dataset detected (<=100 images). Using single-threaded processing.")
             all_results = []
             for i, image_path in enumerate(image_paths):
                 img_array, label = process_single_image(image_path)
@@ -124,38 +129,71 @@ class DatasetLoader:
                 if (i + 1) % 10 == 0 or (i + 1) == len(image_paths):
                     progress = ((i + 1) / len(image_paths)) * 100
                     elapsed = time.time() - start_time
-                    print(f"Progress: {progress:.1f}% ({i + 1}/{len(image_paths)} images) - {elapsed:.1f}s elapsed")
+                    print(f"[INFO] Progress: {progress:.1f}% ({i + 1:,}/{len(image_paths):,} images) - {elapsed:.1f}s elapsed")
         else:
             # Try multiprocessing first, fallback to single-threaded if it fails
             try:
-                # Determine optimal number of processes
-                num_processes = min(mp.cpu_count(), 8)  # Cap at 8 processes to avoid overhead
-                batch_size = max(1, len(image_paths) // (num_processes * 4))  # Ensure reasonable batch sizes
-                print(f"Using {num_processes} processes with batch size {batch_size}")
+                # Conservative multiprocessing configuration for system-friendly operation
+                # Use only 2 processes maximum to reduce system load
+                num_processes = min(2, mp.cpu_count() // 2)  # Use at most 2 processes or half of CPU cores
+                if num_processes < 1:
+                    num_processes = 1
+                
+                # Larger batch sizes to reduce overhead and memory pressure
+                batch_size = max(50, len(image_paths) // (num_processes * 2))  # Larger batches, fewer total
+                print(f"[INFO] Using {num_processes} process(es) with batch size {batch_size}")
+                
                 # Split image paths into batches
                 batches = [image_paths[i:i + batch_size] for i in range(0, len(image_paths), batch_size)]
                 all_results = []
-                # Process batches in parallel
+                
+                # Process batches in parallel with limited concurrency
                 with ProcessPoolExecutor(max_workers=num_processes) as executor:
-                    # Submit all batches
-                    future_to_batch = {
-                        executor.submit(process_image_batch, batch): batch 
-                        for batch in batches
-                    }
-                    # Collect results with progress tracking
+                    # Submit batches one at a time to limit memory usage
+                    futures = []
                     completed = 0
-                    for future in as_completed(future_to_batch):
-                        batch_results = future.result()
-                        all_results.extend(batch_results)
-                        completed += 1
-                        # Progress update every 10% or every 10 batches
-                        if completed % max(1, len(batches) // 10) == 0 or completed % 10 == 0:
+                    
+                    for i, batch in enumerate(batches):
+                        # Submit batch
+                        future = executor.submit(process_image_batch, batch)
+                        futures.append(future)
+                        
+                        # Wait for completion if we have too many pending futures
+                        # This prevents memory buildup and reduces system load
+                        if len(futures) >= num_processes:
+                            # Wait for one future to complete
+                            done_future = futures.pop(0)
+                            try:
+                                batch_results = done_future.result()
+                                all_results.extend(batch_results)
+                                completed += 1
+                            except Exception as e:
+                                print(f"[WARNING] Batch processing failed: {e}")
+                            
+                            # Progress update
+                            if completed % max(1, len(batches) // 10) == 0 or completed % 5 == 0:
+                                progress = (completed / len(batches)) * 100
+                                elapsed = time.time() - start_time
+                                print(f"[INFO] Progress: {progress:.1f}% ({completed:,}/{len(batches):,} batches) - {elapsed:.1f}s elapsed")
+                    
+                    # Wait for remaining futures
+                    for future in futures:
+                        try:
+                            batch_results = future.result()
+                            all_results.extend(batch_results)
+                            completed += 1
+                        except Exception as e:
+                            print(f"[WARNING] Batch processing failed: {e}")
+                        
+                        # Final progress updates
+                        if completed % max(1, len(batches) // 10) == 0 or completed % 5 == 0:
                             progress = (completed / len(batches)) * 100
                             elapsed = time.time() - start_time
-                            print(f"Progress: {progress:.1f}% ({completed}/{len(batches)} batches) - {elapsed:.1f}s elapsed")
+                            print(f"[INFO] Progress: {progress:.1f}% ({completed:,}/{len(batches):,} batches) - {elapsed:.1f}s elapsed")
+                            
             except Exception as e:
-                print(f"Multiprocessing failed: {e}")
-                print("Falling back to single-threaded processing...")
+                print(f"[WARNING] Multiprocessing failed: {e}")
+                print("[INFO] Falling back to single-threaded processing...")
                 # Fallback to single-threaded processing
                 all_results = []
                 for i, image_path in enumerate(image_paths):
@@ -166,11 +204,11 @@ class DatasetLoader:
                     if (i + 1) % 100 == 0:
                         progress = ((i + 1) / len(image_paths)) * 100
                         elapsed = time.time() - start_time
-                        print(f"Progress: {progress:.1f}% ({i + 1}/{len(image_paths)} images) - {elapsed:.1f}s elapsed")
+                        print(f"[INFO] Progress: {progress:.1f}% ({i + 1:,}/{len(image_paths):,} images) - {elapsed:.1f}s elapsed")
         
         # Separate images and labels
         if not all_results:
-            print("No images were successfully processed!")
+            print("[ERROR] No images were successfully processed!")
             return None, None
         
         images, labels = zip(*all_results)
@@ -178,22 +216,28 @@ class DatasetLoader:
         labels = np.array(labels)
         
         total_time = time.time() - start_time
-        print(f"Processed {len(images)} images in {total_time:.2f} seconds")
-        print(f"Average time per image: {total_time/len(images)*1000:.2f} ms")
-        print(f"Image shape: {images.shape}")
-        print(f"Unique labels: {sorted(set(labels))}")
+        print("\n" + "-" * 40)
+        print("PROCESSING COMPLETE")
+        print("-" * 40)
+        print(f"[INFO] Processed {len(images):,} images in {total_time:.2f} seconds")
+        print(f"[INFO] Average time per image: {total_time/len(images)*1000:.2f} ms")
+        print(f"[INFO] Image shape: {images.shape}")
+        
+        # Convert numpy string objects to regular strings for clean display
+        unique_labels = sorted(set(str(label) for label in labels))
+        print(f"[INFO] Unique labels: {unique_labels}")
 
         # Shuffle the data
-        print("Shuffling data...")
+        print("\n[INFO] Shuffling data...")
         images_sh, labels_sh = shuffle(images, labels, random_state=42)
-        print("Data shuffling complete")
+        print("[SUCCESS] Data shuffling complete")
         
-        print("Do you want to save the processed data? (y/n): ")
+        print("\n[INFO] Do you want to save the processed data? (y/n): ")
         save_choice = input().strip().lower()
         if save_choice == 'y':
             self.save_processed_data(images, labels, self.save_dir)
         else:
-            print("Processed data not saved.")
+            print("[INFO] Processed data not saved.")
         
         return images_sh, labels_sh
     
@@ -250,125 +294,103 @@ class DatasetLoader:
             return None, None
 
     def dataDirCheck(self, data_dir):
-        # get available data directories
-        print("Available datasets:")
+        print("\n" + "-" * 40)
+        print("DATASET SELECTION")
+        print("-" * 40)
+        print("[INFO] Available datasets:")
+        
         data_dirs = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))])
         if not data_dirs:
-            print("No datasets found.")
+            print("[ERROR] No datasets found in the specified directory.")
+            print("       Please ensure you have dataset folders available.")
             return None, None
-            
-        for i, dir_name in enumerate(data_dirs):
-            print(f"{i+1}. {dir_name}")
+        
+        print("-" * 40)
+        for i, dir_name in enumerate(data_dirs, 1):
+            print(f"  {i}. {dir_name}")
+        
+        print("-" * 40)
         
         # select data directory
         try:
-            data_idx = int(input("Select dataset number: ")) - 1
+            data_idx = int(input(f"Select dataset (1-{len(data_dirs)}): ")) - 1
             if data_idx < 0 or data_idx >= len(data_dirs):
-                print("Invalid selection. Exiting test mode.")
+                print(f"[ERROR] Invalid selection. Please enter a number between 1 and {len(data_dirs)}")
                 return None, None
             selected_test_dir = os.path.join(data_dir, data_dirs[data_idx])
         except ValueError:
-            print("Invalid input. Please enter a number.")
+            print("[ERROR] Invalid input. Please enter a number.")
             return None, None
         
-        print(f"Loading data from {data_dirs[data_idx]}...")
+        print(f"[INFO] Loading data from: {data_dirs[data_idx]}...")
         images, labels = self.load_dataset(selected_test_dir)  
         return images, labels
     
     def npzCheck(self, data_dir):
-        print(f"Checking for .npz files in: {data_dir}")
+        print("\n" + "-" * 40)
+        print("DATASET SELECTION")
+        print("-" * 40)
+        print(f"[INFO] Checking for .npz files in: {data_dir}")
         
         # verify directory exists
         if not os.path.exists(data_dir):
-            print(f"Error: Directory {data_dir} does not exist")
+            print(f"[ERROR] Directory {data_dir} does not exist")
             return None, None
         
         # get available test data files with debug info
         files = sorted([file for file in os.listdir(data_dir) if file.endswith('.npz')])
-        print(f"Found {len(files)} .npz files")
+        print(f"[INFO] Found {len(files)} .npz file(s)")
         
         if not files:
-            print("No .npz files found.")
+            print("[ERROR] No .npz files found in the specified directory.")
+            print("       Please ensure you have processed data files available.")
             return None, None
-            
+        
+        print("-" * 40)
         # print available files with full paths
-        for i, filename in enumerate(files):
+        for i, filename in enumerate(files, 1):
             full_path = os.path.join(data_dir, filename)
-            print(f"{i+1}. {filename} ({full_path})")
+            print(f"  {i}. {filename}")
+            print(f"     Path: {full_path}")
+        
+        print("-" * 40)
         
         # select test file
         try:
-            idx = int(input("Select dataset number: ")) - 1
+            idx = int(input(f"Select dataset (1-{len(files)}): ")) - 1
             if idx < 0 or idx >= len(files):
-                print(f"Invalid selection. Index {idx+1} out of range (1-{len(files)})")
+                print(f"[ERROR] Invalid selection. Please enter a number between 1 and {len(files)}")
                 return None, None
                 
             selected_file = os.path.join(data_dir, files[idx])
-            print(f"Loading data from: {selected_file}")
+            print(f"[INFO] Loading data from: {selected_file}")
             
             # load the file
             try:
                 data = np.load(selected_file)
                 if 'images' not in data or 'labels' not in data:
-                    print(f"Error: File missing required arrays 'images' or 'labels'")
-                    print(f"Available arrays: {data.files}")
+                    print(f"[ERROR] File missing required arrays 'images' or 'labels'")
+                    print(f"       Available arrays: {data.files}")
                     return None, None
                     
                 images = data['images']
                 labels = data['labels']
                 
-                print(f"Successfully loaded:")
-                print(f"- Images shape: {images.shape}")
-                print(f"- Labels shape: {labels.shape}")
+                print("\n" + "-" * 40)
+                print("DATASET LOADED SUCCESSFULLY")
+                print("-" * 40)
+                print(f"[INFO] Images shape: {images.shape}")
+                print(f"[INFO] Labels shape: {labels.shape}")
+                print(f"[INFO] Total samples: {len(images):,}")
+                print(f"[INFO] Unique labels: {len(set(labels))}")
+                print("-" * 40)
                 
                 return images, labels
                 
             except Exception as e:
-                print(f"Error loading npz file: {e}")
+                print(f"[ERROR] Error loading npz file: {e}")
                 return None, None
                 
         except ValueError:
-            print("Invalid input. Please enter a number.")
+            print("[ERROR] Invalid input. Please enter a number.")
             return None, None
-    def select_dataset(self, data_dir):
-        while True:
-            try:
-                choice = int(input("Please select a valid option (1-3): "))
-
-                if choice == 1:     
-                    # Check if directory exists before processing
-                    if not os.path.exists(data_dir):
-                        print(f"Error: Data directory not found at {data_dir}")
-                        print("Please ensure the directory exists and contains your dataset.")
-                        continue
-                    
-                    images, labels = self.dataDirCheck(data_dir)
-                    if images is None or labels is None:
-                        print("Failed to load dataset. Please check your data directory.")
-                        continue
-                    
-                    # Successfully loaded data, break out of loop
-                    print("Dataset loaded successfully!")
-                    return images, labels
-                    
-                elif choice == 2:
-                    images, labels = self.npzCheck(data_dir)
-                    if images is None or labels is None:
-                        print("Failed to load .npz file. Please check if the file exists and is valid.")
-                        continue
-                    
-                    # Successfully loaded data, break out of loop
-                    print("NPZ file loaded successfully!")
-                    return images, labels
-                
-                elif choice == 3:
-                    print("Returning to main menu...")
-                    return None, None
-
-                else:
-                    print("Invalid choice. Please select a number between 1 and 3.")
-                    continue
-
-            except ValueError:
-                print("Invalid input. Please enter a number between 1 and 3.")
-                continue

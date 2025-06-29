@@ -33,11 +33,7 @@ def create_character_image_worker(args):
         
         # Draw the character
         draw.text(position, char, fill="black", font=font)
-        
-        # Apply random rotation of ±20 degrees
-        rotation_angle = random.uniform(-20, 20)
-        img = img.rotate(rotation_angle, expand=True, fillcolor="white")
-        
+                
         # Crop to final size, ensuring we get the center portion
         img_width, img_height = img.size
         left = (img_width - size) // 2
@@ -189,32 +185,65 @@ class CharacterImageGenerator:
                     elapsed = time.time() - start_time
                     print(f"Progress: {progress:.1f}% ({i + 1}/{len(all_tasks)} images) - {elapsed:.1f}s elapsed")
         else:
-            # Determine optimal number of processes
-            num_processes = min(mp.cpu_count(), 8)
-            batch_size = max(1, len(all_tasks) // (num_processes * 4))
-            print(f"Using {num_processes} processes with batch size {batch_size}")
+            # Conservative multiprocessing configuration for system-friendly operation
+            # Use only 2 processes maximum to reduce system load
+            num_processes = min(2, mp.cpu_count() // 2)  # Use at most 2 processes or half of CPU cores
+            if num_processes < 1:
+                num_processes = 1
+            
+            # Larger batch sizes to reduce overhead and memory pressure
+            batch_size = max(50, len(all_tasks) // (num_processes * 2))  # Larger batches, fewer total
+            print(f"Using {num_processes} process(es) with batch size {batch_size}")
+            
             # Split tasks into batches
             batches = [all_tasks[i:i + batch_size] for i in range(0, len(all_tasks), batch_size)]
-            # Process batches in parallel
+            
+            # Process batches in parallel with limited concurrency
             successful_images = 0
             try:
                 with ProcessPoolExecutor(max_workers=num_processes) as executor:
-                    # Submit all batches
-                    future_to_batch = {
-                        executor.submit(self._process_batch, batch): batch 
-                        for batch in batches
-                    }
-                    # Collect results with progress tracking
+                    # Submit batches one at a time to limit memory usage
+                    futures = []
                     completed = 0
-                    for future in as_completed(future_to_batch):
-                        batch_results = future.result()
-                        successful_images += sum(batch_results)
-                        completed += 1
-                        # Progress update every 10% or every 10 batches
-                        if completed % max(1, len(batches) // 10) == 0 or completed % 10 == 0:
+                    
+                    for i, batch in enumerate(batches):
+                        # Submit batch
+                        future = executor.submit(self._process_batch, batch)
+                        futures.append(future)
+                        
+                        # Wait for completion if we have too many pending futures
+                        # This prevents memory buildup and reduces system load
+                        if len(futures) >= num_processes:
+                            # Wait for one future to complete
+                            done_future = futures.pop(0)
+                            try:
+                                batch_results = done_future.result()
+                                successful_images += sum(batch_results)
+                                completed += 1
+                            except Exception as e:
+                                print(f"[WARNING] Batch processing failed: {e}")
+                            
+                            # Progress update
+                            if completed % max(1, len(batches) // 10) == 0 or completed % 5 == 0:
+                                progress = (completed / len(batches)) * 100
+                                elapsed = time.time() - start_time
+                                print(f"Progress: {progress:.1f}% ({completed}/{len(batches)} batches) - {elapsed:.1f}s elapsed")
+                    
+                    # Wait for remaining futures
+                    for future in futures:
+                        try:
+                            batch_results = future.result()
+                            successful_images += sum(batch_results)
+                            completed += 1
+                        except Exception as e:
+                            print(f"[WARNING] Batch processing failed: {e}")
+                        
+                        # Final progress updates
+                        if completed % max(1, len(batches) // 10) == 0 or completed % 5 == 0:
                             progress = (completed / len(batches)) * 100
                             elapsed = time.time() - start_time
                             print(f"Progress: {progress:.1f}% ({completed}/{len(batches)} batches) - {elapsed:.1f}s elapsed")
+                            
             except Exception as e:
                 print(f"Multiprocessing failed: {e}")
                 print("Falling back to single-threaded processing...")
