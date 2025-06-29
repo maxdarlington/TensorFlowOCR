@@ -222,20 +222,4 @@ python src\main.py
 - **Recommended**: 8GB+ RAM, 5GB+ free disk space
 - **For large datasets**: 16GB+ RAM recommended
 
-## Contributing
-
-This project is designed for educational purposes and HSC Software Engineering assessment. The system demonstrates advanced OCR concepts including:
-
-- Neural network architecture design
-- Data preprocessing and augmentation
-- User interface development
-- System resource management
-- Cross-platform compatibility
-
-## License
-
-This project is created for educational purposes as part of the HSC Software Engineering curriculum at Chatswood High School.
-
----
-
 **Happy OCR Training! (^\_^)**
