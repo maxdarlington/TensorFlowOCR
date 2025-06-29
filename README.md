@@ -157,7 +157,6 @@ python src\main.py
 1. **Select "Generate custom dataset"**
 2. **Automatic processing**: Creates character images from all fonts in `content/fonts/`
 3. **Features**:
-   - **Rotation**: ±20 degrees for realistic variation
    - **Multiple fonts**: All available fonts are used
    - **Character coverage**: Letters, numbers, and symbols
    - **System-friendly**: Conservative multiprocessing
@@ -167,7 +166,6 @@ python src\main.py
 ### For Large Datasets
 
 - **Use processed `.npz` files** for faster loading
-- **Monitor system resources** during processing
 - **Consider dataset size** when choosing epoch count
 
 ### For Best Results
@@ -175,7 +173,6 @@ python src\main.py
 - **Diverse fonts**: Include serif, sans-serif, and monospace fonts
 - **Quality images**: Use clear, well-lit character images
 - **Balanced classes**: Ensure equal representation of all characters
-- **Rotation tolerance**: Include rotated images for robustness
 
 ## Output Files
 
