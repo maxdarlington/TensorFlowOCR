@@ -7,6 +7,17 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 import csv
+def save_results_to_csv(results, csv_path):
+    """Save a list of result dictionaries to a CSV file."""
+    if not results:
+        print("No results to save.")
+        return
+    keys = results[0].keys()
+    with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(results)
+    print(f"Results saved to {csv_path}")
 
 def foldername_to_label(folder_name):
     if folder_name.startswith('upper'):
@@ -319,15 +330,45 @@ class DatasetLoader:
         except ValueError:
             print("Invalid input. Please enter a number.")
             return None, None
+    def select_dataset(self, data_dir):
+        while True:
+            try:
+                choice = int(input("Please select a valid option (1-3): "))
 
-def save_results_to_csv(results, csv_path):
-    """Save a list of result dictionaries to a CSV file."""
-    if not results:
-        print("No results to save.")
-        return
-    keys = results[0].keys()
-    with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=keys)
-        writer.writeheader()
-        writer.writerows(results)
-    print(f"Results saved to {csv_path}")
+                if choice == 1:     
+                    # Check if directory exists before processing
+                    if not os.path.exists(data_dir):
+                        print(f"Error: Data directory not found at {data_dir}")
+                        print("Please ensure the directory exists and contains your dataset.")
+                        continue
+                    
+                    images, labels = self.dataDirCheck(data_dir)
+                    if images is None or labels is None:
+                        print("Failed to load dataset. Please check your data directory.")
+                        continue
+                    
+                    # Successfully loaded data, break out of loop
+                    print("Dataset loaded successfully!")
+                    return images, labels
+                    
+                elif choice == 2:
+                    images, labels = self.npzCheck(data_dir)
+                    if images is None or labels is None:
+                        print("Failed to load .npz file. Please check if the file exists and is valid.")
+                        continue
+                    
+                    # Successfully loaded data, break out of loop
+                    print("NPZ file loaded successfully!")
+                    return images, labels
+                
+                elif choice == 3:
+                    print("Returning to main menu...")
+                    return None, None
+
+                else:
+                    print("Invalid choice. Please select a number between 1 and 3.")
+                    continue
+
+            except ValueError:
+                print("Invalid input. Please enter a number between 1 and 3.")
+                continue
