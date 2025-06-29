@@ -94,7 +94,7 @@ _Note: Only essential Regular and Bold variants are included to reduce redundanc
    ```
 
 3. **Image requirements**:
-   - **Format**: PNG, JPG, JPEG, BMP, TIFF
+   - **Format**: PNG
    - **Size**: 28x28 pixels (will be automatically resized)
    - **Color**: Grayscale or RGB (will be converted to grayscale)
 
