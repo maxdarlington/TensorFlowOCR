@@ -21,29 +21,12 @@ A comprehensive Optical Character Recognition (OCR) system built with TensorFlow
 
 1. **Clone the repository**:
 
-   **Bash (Linux/macOS):**
-
-   ```bash
-   git clone https://github.com/maxdarlington/TensorFlowOCR.git
-   cd TensorFlowOCR
-   ```
-
-   **Windows Command Prompt:**
-
    ```cmd
    git clone https://github.com/maxdarlington/TensorFlowOCR.git
    cd TensorFlowOCR
    ```
 
-2. **Install dependencies**:
-
-   **Bash (Linux/macOS):**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-   **Windows Command Prompt:**
+3. **Install dependencies**:
 
    ```cmd
    pip install -r requirements.txt
@@ -111,7 +94,7 @@ _Note: Only essential Regular and Bold variants are included to reduce redundanc
    ```
 
 3. **Image requirements**:
-   - **Format**: PNG, JPG, JPEG, BMP, TIFF
+   - **Format**: PNG
    - **Size**: 28x28 pixels (will be automatically resized)
    - **Color**: Grayscale or RGB (will be converted to grayscale)
 
@@ -174,7 +157,6 @@ python src\main.py
 1. **Select "Generate custom dataset"**
 2. **Automatic processing**: Creates character images from all fonts in `content/fonts/`
 3. **Features**:
-   - **Rotation**: ±20 degrees for realistic variation
    - **Multiple fonts**: All available fonts are used
    - **Character coverage**: Letters, numbers, and symbols
    - **System-friendly**: Conservative multiprocessing
@@ -184,7 +166,6 @@ python src\main.py
 ### For Large Datasets
 
 - **Use processed `.npz` files** for faster loading
-- **Monitor system resources** during processing
 - **Consider dataset size** when choosing epoch count
 
 ### For Best Results
@@ -192,7 +173,6 @@ python src\main.py
 - **Diverse fonts**: Include serif, sans-serif, and monospace fonts
 - **Quality images**: Use clear, well-lit character images
 - **Balanced classes**: Ensure equal representation of all characters
-- **Rotation tolerance**: Include rotated images for robustness
 
 ## Output Files
 
@@ -238,21 +218,5 @@ python src\main.py
 - **Minimum**: 4GB RAM, 2GB free disk space
 - **Recommended**: 8GB+ RAM, 5GB+ free disk space
 - **For large datasets**: 16GB+ RAM recommended
-
-## Contributing
-
-This project is designed for educational purposes and HSC Software Engineering assessment. The system demonstrates advanced OCR concepts including:
-
-- Neural network architecture design
-- Data preprocessing and augmentation
-- User interface development
-- System resource management
-- Cross-platform compatibility
-
-## License
-
-This project is created for educational purposes as part of the HSC Software Engineering curriculum at Chatswood High School.
-
----
 
 **Happy OCR Training! (^\_^)**
