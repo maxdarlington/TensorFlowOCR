@@ -21,16 +21,12 @@ A comprehensive Optical Character Recognition (OCR) system built with TensorFlow
 
 1. **Clone the repository**:
 
-   **Command Prompt:**
-
    ```cmd
    git clone https://github.com/maxdarlington/TensorFlowOCR.git
    cd TensorFlowOCR
    ```
 
 3. **Install dependencies**:
-
-   **Command Prompt:**
 
    ```cmd
    pip install -r requirements.txt
