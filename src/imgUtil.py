@@ -5,10 +5,11 @@ import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import glob
+from main import show_loading_throbber
 
 def create_character_image_worker(args):
     """Worker function for multiprocessing character image creation"""
-    char, folder_name, font_path, font_name, output_base_dir, size = args
+    char, folder_name, font_path, font_name, output_base_dir, size, apply_rotation = args
     
     try:
         # Load font
@@ -19,7 +20,7 @@ def create_character_image_worker(args):
         os.makedirs(char_dir, exist_ok=True)
         
         # Create image with padding to prevent cutoff during rotation
-        padding = 8  # Increased padding to accommodate rotation
+        padding = 8 if apply_rotation else 0  # Only add padding if rotation is enabled
         padded_size = (size + padding, size + padding)
         img = Image.new("L", padded_size, color="white")
         draw = ImageDraw.Draw(img)
@@ -33,7 +34,12 @@ def create_character_image_worker(args):
         
         # Draw the character
         draw.text(position, char, fill="black", font=font)
-                
+        
+        # Apply random rotation of ±20 degrees if enabled
+        if apply_rotation:
+            rotation_angle = random.uniform(-20, 20)
+            img = img.rotate(rotation_angle, expand=True, fillcolor="white")
+        
         # Crop to final size, ensuring we get the center portion
         img_width, img_height = img.size
         left = (img_width - size) // 2
@@ -87,13 +93,13 @@ class CharacterImageGenerator:
         self.numbers = [chr(i) for i in range(48,58)]
         self.characters = self.upperLetters + self.lowerLetters + self.numbers
 
-    def create_character_image(self, char, folder_name, font, font_name):
+    def create_character_image(self, char, folder_name, font, font_name, apply_rotation=True):
         # Create folder for this character in base output directory
         char_dir = os.path.join(self.output_base_dir, folder_name)
         os.makedirs(char_dir, exist_ok=True)
         
         # Create image with padding to prevent cutoff during rotation
-        padding = 8  # Increased padding to accommodate rotation
+        padding = 8 if apply_rotation else 0  # Only add padding if rotation is enabled
         padded_size = (self.size + padding, self.size + padding)
         img = Image.new("L", padded_size, color="white")
         draw = ImageDraw.Draw(img)
@@ -108,9 +114,10 @@ class CharacterImageGenerator:
         # Draw the character
         draw.text(position, char, fill="black", font=font)
         
-        # Apply random rotation of ±20 degrees
-        rotation_angle = random.uniform(-20, 20)
-        img = img.rotate(rotation_angle, expand=True, fillcolor="white")
+        # Apply random rotation of ±20 degrees if enabled
+        if apply_rotation:
+            rotation_angle = random.uniform(-20, 20)
+            img = img.rotate(rotation_angle, expand=True, fillcolor="white")
         
         # Crop to final size, ensuring we get the center portion
         img_width, img_height = img.size
@@ -133,8 +140,10 @@ class CharacterImageGenerator:
         filename = f"{font_name}_{safe_name}.png"
         img.save(os.path.join(char_dir, filename))
 
-    def generateImages(self):
+    def generateImages(self, apply_rotation=True):
         """Optimized image generation with multiprocessing"""
+        print("[INFO] Preparing to generate images. This may take a while...")
+        show_loading_throbber("Generating images", duration=1.0)
         # Get all font files from fonts directory
         font_files = [f for f in os.listdir(self.fonts_dir) if f.endswith(('.woff2', '.ttf', 'otf'))]
         
@@ -143,6 +152,7 @@ class CharacterImageGenerator:
             return
         
         print(f"Found {len(font_files)} font files. Generating images...")
+        print(f"[INFO] Random rotation: {'Enabled (±20°)' if apply_rotation else 'Disabled'}")
         start_time = time.time()
         
         # Prepare all tasks
@@ -161,12 +171,12 @@ class CharacterImageGenerator:
                 else:
                     folder_name = f"{char}"
                 
-                all_tasks.append((char, folder_name, font_path, font_name, self.output_base_dir, self.size))
+                all_tasks.append((char, folder_name, font_path, font_name, self.output_base_dir, self.size, apply_rotation))
                 total_images += 1
 
             # Process symbols
             for sym, word in zip(self.symbols, self.symwords):
-                all_tasks.append((sym, word, font_path, font_name, self.output_base_dir, self.size))
+                all_tasks.append((sym, word, font_path, font_name, self.output_base_dir, self.size, apply_rotation))
                 total_images += 1
         
         print(f"Total images to generate: {total_images}")

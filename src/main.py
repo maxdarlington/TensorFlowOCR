@@ -4,6 +4,76 @@ from model import Model
 import sys
 import time
 import random
+import matplotlib.pyplot as plt
+
+def show_loading_throbber(message, duration=None, update_interval=0.1):
+    """
+    Display a loading throbber with optional duration
+    
+    Args:
+        message (str): The message to display
+        duration (float, optional): How long to show the throbber (in seconds)
+        update_interval (float): How often to update the throbber (in seconds)
+    """
+    throbber_chars = ['|', '/', '-', '\\']
+    throbber_idx = 0
+    start_time = time.time()
+    
+    try:
+        while True:
+            # Clear the line and show throbber
+            print(f"\r[INFO] {message} {throbber_chars[throbber_idx]}", end='', flush=True)
+            
+            # Check if duration has elapsed
+            if duration and (time.time() - start_time) >= duration:
+                break
+                
+            time.sleep(update_interval)
+            throbber_idx = (throbber_idx + 1) % len(throbber_chars)
+            
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Clear the throbber line
+        print("\r" + " " * (len(message) + 20) + "\r", end='', flush=True)
+
+def show_progress_with_throbber(message, current, total, start_time, update_interval=0.1):
+    """
+    Show progress with a throbber for operations that don't have natural progress updates
+    
+    Args:
+        message (str): The message to display
+        current (int): Current progress
+        total (int): Total items
+        start_time (float): Start time for ETA calculation
+        update_interval (float): How often to update the throbber
+    """
+    throbber_chars = ['|', '/', '-', '\\']
+    throbber_idx = 0
+    
+    progress = (current / total) * 100 if total > 0 else 0
+    elapsed = time.time() - start_time
+    
+    # Calculate ETA
+    if progress > 0:
+        avg_time_per_item = elapsed / current
+        remaining_items = total - current
+        estimated_remaining = avg_time_per_item * remaining_items
+        
+        if estimated_remaining > 60:
+            minutes = int(estimated_remaining // 60)
+            seconds = int(estimated_remaining % 60)
+            eta_str = f"{minutes}m {seconds}s"
+        elif estimated_remaining > 1:
+            eta_str = f"{estimated_remaining:.1f}s"
+        else:
+            eta_str = f"{estimated_remaining*1000:.0f}ms"
+        
+        print(f"\r[INFO] {message} {throbber_chars[throbber_idx]} - {current:,}/{total:,} ({progress:.1f}%) - ETA: {eta_str}", end='', flush=True)
+    else:
+        print(f"\r[INFO] {message} {throbber_chars[throbber_idx]} - {current:,}/{total:,} ({progress:.1f}%)", end='', flush=True)
+    
+    return (throbber_idx + 1) % len(throbber_chars)
 
 def result_helper(model, num, test_images, test_labels, save_csv):
     correct_predictions = 0
@@ -242,8 +312,6 @@ class Main():
         return self._CharacterImageGenerator
 
     def trainingMode(self, data_dir, model_dir):
-        import matplotlib.pyplot as plt
-
         print("\n" + "=" * 50)
         print("TRAINING MODE")
         print("=" * 50)
@@ -265,8 +333,12 @@ class Main():
                 os.makedirs(data_dir, exist_ok=True)
 
             if choice == 1:
+                print("[INFO] Processing dataset. This may take a while...")
+                show_loading_throbber("Processing dataset", duration=1.0)
                 train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
             elif choice == 2:
+                print("[INFO] Loading processed dataset (.npz). This may take a while...")
+                show_loading_throbber("Loading processed dataset", duration=1.0)
                 train_images, train_labels = self.DatasetLoader.npzCheck(data_dir)
 
             if train_images is None or train_labels is None:
@@ -275,12 +347,27 @@ class Main():
             
             # model training section
             try:
-                print("\nInitializing model...")
+                print("\n" + "-" * 40)
+                print("MODEL TRAINING")
+                print("-" * 40)
+                
+                print("[INFO] Initializing model...")
+                show_loading_throbber("Initializing model", duration=1.0)
                 model = Model()
+                print("[SUCCESS] Model initialized successfully")
+                
+                print("[INFO] Starting training process...")
                 history = model.train(train_images, train_labels)
-                print("Training model...")
+                
+                if history is None:
+                    print("[ERROR] Training failed or was cancelled")
+                    continue
+                    
+                print("[SUCCESS] Training completed successfully")
                 
                 # plot training history against validation loss
+                print("[INFO] Generating training plots...")
+                show_loading_throbber("Generating plots", duration=0.5)
                 plt.figure(figsize=(10, 5))
                 plt.plot(history.history['loss'], label='Training Loss')
                 plt.plot(history.history['val_loss'], label='Validation Loss')
@@ -290,13 +377,15 @@ class Main():
                 plt.legend()
                 plt.show()
 
+                print("[INFO] Saving model...")
                 file_name = input("Enter a name for the model file (without extension): ").strip()
+                show_loading_throbber("Saving model", duration=0.5)
                 model.save_model(os.path.join(model_dir, f"{file_name}.keras"))
-                print(f"Model saved as {file_name}.keras")
+                print(f"[SUCCESS] Model saved as {file_name}.keras")
                 return
 
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"[ERROR] Training error: {e}")
                 print("Please check the dataset and try again.")
                 continue
 
@@ -323,8 +412,12 @@ class Main():
                 os.makedirs(data_dir, exist_ok=True)
 
             if choice == 1:
+                print("[INFO] Processing dataset.")
+                show_loading_throbber("Processing dataset", duration=1.0)
                 test_images, test_labels = self.DatasetLoader.dataDirCheck(data_dir)
             elif choice == 2:
+                print("[INFO] Loading processed dataset (.npz).")
+                show_loading_throbber("Loading processed dataset", duration=1.0)
                 test_images, test_labels = self.DatasetLoader.npzCheck(data_dir)
 
             if test_images is None or test_labels is None or len(test_images) == 0 or len(test_labels) == 0:
@@ -339,6 +432,7 @@ class Main():
         # load model with error handling
         try:
             print("\nLoading model...")
+            show_loading_throbber("Loading model", duration=1.0)
             model = Model()
             model.load_model(model_path)
             print("Model loaded successfully!")
@@ -367,9 +461,9 @@ class Main():
                         continue
                     results, correct_predictions, total_predictions = result_helper(model, num, test_images, test_labels, save_csv)
                     if save_csv and results:
-                        print("Saving results to CSV...")
+                        print("[INFO] Saving results to CSV...")
+                        show_loading_throbber("Saving CSV", duration=0.5)
                         save_to_csv(results)
-                        print("Results saved successfully.")
                     break
                 elif user_input == 2:
                     num = test_case_num(test_images)
@@ -402,9 +496,11 @@ class Main():
                     print("-" * 40)
                     
                     try:
-                        # Loading throbber characters
+                        # Loading throbber characters with consistent 0.1s interval
                         throbber_chars = ['|', '/', '-', '\\']
                         throbber_idx = 0
+                        last_throbber_update = time.time()
+                        throbber_interval = 0.1  # Consistent with other throbbers
                         
                         for i in range(num):
                             try:
@@ -449,12 +545,12 @@ class Main():
                                     else:
                                         print(f"[INFO] Progress: {i + 1:,}/{num:,} ({progress:.1f}%)")
                                 else:
-                                    # Show throbber for every 10th test case
-                                    if (i + 1) % 10 == 0:
+                                    # Show throbber with consistent 0.1s interval
+                                    current_time = time.time()
+                                    if current_time - last_throbber_update >= throbber_interval:
                                         print(f"\r[INFO] Processing... {throbber_chars[throbber_idx]}", end='', flush=True)
-                                
-                                # Update throbber
-                                throbber_idx = (throbber_idx + 1) % len(throbber_chars)
+                                        throbber_idx = (throbber_idx + 1) % len(throbber_chars)
+                                        last_throbber_update = current_time
                                     
                             except Exception as e:
                                 print(f"[ERROR] Error processing test case {i+1}: {e}")
@@ -481,8 +577,8 @@ class Main():
                         
                         if save_csv and results:
                             print("[INFO] Saving results to CSV...")
+                            show_loading_throbber("Saving CSV", duration=0.5)
                             save_to_csv(results)
-                            print("[SUCCESS] Results saved successfully.")
                             
                     except Exception as e:
                         print(f"[ERROR] Error during testing: {e}")
@@ -528,7 +624,18 @@ if __name__ == "__main__":
 
             elif choice == '3':
                 print("\nStarting Dataset Generation...")
-                main.CharacterImageGenerator.generateImages()
+                print("\n" + "-" * 40)
+                print("IMAGE GENERATION CONFIGURATION")
+                print("-" * 40)
+                print("[INFO] Random rotation adds ±20 degrees variation to each character")
+                print("[INFO] This helps the model learn to recognize rotated text")
+                print("-" * 40)
+                apply_rotation = get_yes_no("Apply random rotation to images? (y/n): ")
+                if apply_rotation is None:
+                    apply_rotation = True  # Default to True if user cancels
+                print(f"[INFO] Random rotation: {'Enabled' if apply_rotation else 'Disabled'}")
+                print("-" * 40)
+                main.CharacterImageGenerator.generateImages(apply_rotation)
 
             elif choice == '4':
                 print("\nThank you for using Max's TensorFlow OCR! (^_^)")

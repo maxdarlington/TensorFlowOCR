@@ -7,6 +7,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import glob
 import csv
+from main import show_loading_throbber
 
 def save_results_to_csv(results, csv_path):
     """Save a list of result dictionaries to a CSV file."""
@@ -103,6 +104,8 @@ class DatasetLoader:
     
     def load_dataset(self, data_dir):
         """Optimized dataset loading with multiprocessing"""
+        print("[INFO] Preparing to process dataset. This may take a while...")
+        show_loading_throbber("Processing dataset", duration=1.0)
         print("\n" + "-" * 40)
         print("DATASET PROCESSING")
         print("-" * 40)
@@ -229,6 +232,7 @@ class DatasetLoader:
 
         # Shuffle the data
         print("\n[INFO] Shuffling data...")
+        show_loading_throbber("Shuffling data", duration=0.5)
         images_sh, labels_sh = shuffle(images, labels, random_state=42)
         print("[SUCCESS] Data shuffling complete")
         
