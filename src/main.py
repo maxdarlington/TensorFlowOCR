@@ -163,10 +163,12 @@ def test_case_num(test_images):
             continue
         except KeyboardInterrupt:
             print("\n[WARNING] Operation cancelled by user.")
-            raise
+            print("Returning to main menu...")
+            return
         except EOFError:
             print("\n[WARNING] End of input detected.")
-            raise
+            print("Returning to main menu...")
+            return
     
     print(f"[SUCCESS] Configured to run {num:,} test case(s)")
     return num
@@ -217,10 +219,12 @@ def get_valid_int_input(prompt, min_val, max_val):
             print(f"[ERROR] Invalid input: '{choice}'. Please enter a number between {min_val} and {max_val}")
         except KeyboardInterrupt:
             print("\n[WARNING] Operation cancelled by user.")
-            raise
+            print("Returning to main menu...")
+            return
         except EOFError:
             print("\n[WARNING] End of input detected.")
-            raise
+            print("Returning to main menu...")
+            return
 
 def get_yes_no(prompt):
     while True:
@@ -236,7 +240,8 @@ def get_yes_no(prompt):
                 print(f"[ERROR] Invalid choice: '{choice}'. Please enter 'y' or 'n'.")
         except (KeyboardInterrupt, EOFError):
             print("\n[WARNING] Operation cancelled by user.")
-            raise
+            print("Returning to main menu...")
+            return
         except Exception as e:
             print(f"[ERROR] Unexpected error: {e}")
             continue
@@ -284,9 +289,11 @@ def select_model(model_dir):
             print(f"[ERROR] Invalid input: '{model_choice}'. Please enter a number or 'q' to quit.")
         except KeyboardInterrupt:
             print("\n[WARNING] Operation cancelled by user.")
+            print("Returning to main menu...")
             return None
         except EOFError:
             print("\n[WARNING] End of input detected.")
+            print("Returning to main menu...")
             return None
 
 class Main():
@@ -589,6 +596,7 @@ class Main():
                 continue
             except KeyboardInterrupt:
                 print("\n[WARNING] Operation cancelled by user.")
+                print("Returning to main menu...")
                 return
             except Exception as e:
                 print(f"[ERROR] Unexpected error: {e}")
@@ -648,12 +656,12 @@ if __name__ == "__main__":
 
         except KeyboardInterrupt:
             print("\n\n[WARNING] Operation cancelled by user.")
-            print("Exiting program...")
-            sys.exit(0)
+            print("Returning to main menu...")
+            continue
         except EOFError:
             print("\n\n[WARNING] End of input detected.")
-            print("Exiting program...")
-            sys.exit(0)
+            print("Returning to main menu...")
+            continue
         except Exception as e:
             print(f"\n[ERROR] Unexpected error: {e}")
             print("Please try again or contact support if the problem persists.")

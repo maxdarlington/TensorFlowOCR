@@ -89,6 +89,7 @@ class Model:
                     
             except KeyboardInterrupt:
                 print("\n[WARNING] Operation cancelled by user.")
+                print("Returning to main menu...")
                 return None
             except EOFError:
                 print("\n[WARNING] End of input detected.")
@@ -149,7 +150,8 @@ class Model:
                 continue
             except KeyboardInterrupt:
                 print("\n[WARNING] Operation cancelled by user.")
-                raise
+                print("Returning to main menu...")
+                return None
             except EOFError:
                 print("\n[WARNING] End of input detected.")
                 raise

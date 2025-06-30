@@ -301,34 +301,50 @@ class DatasetLoader:
         print("\n" + "-" * 40)
         print("DATASET SELECTION")
         print("-" * 40)
-        print("[INFO] Available datasets:")
-        
-        data_dirs = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))])
-        if not data_dirs:
-            print("[ERROR] No datasets found in the specified directory.")
-            print("       Please ensure you have dataset folders available.")
-            return None, None
-        
+        print("[INFO] Choose how to select your dataset:")
+        print("1. Select from available datasets in the data directory")
+        print("2. Enter a custom dataset path")
         print("-" * 40)
-        for i, dir_name in enumerate(data_dirs, 1):
-            print(f"  {i}. {dir_name}")
-        
-        print("-" * 40)
-        
-        # select data directory
-        try:
-            data_idx = int(input(f"Select dataset (1-{len(data_dirs)}): ")) - 1
-            if data_idx < 0 or data_idx >= len(data_dirs):
-                print(f"[ERROR] Invalid selection. Please enter a number between 1 and {len(data_dirs)}")
-                return None, None
-            selected_test_dir = os.path.join(data_dir, data_dirs[data_idx])
-        except ValueError:
-            print("[ERROR] Invalid input. Please enter a number.")
-            return None, None
-        
-        print(f"[INFO] Loading data from: {data_dirs[data_idx]}...")
-        images, labels = self.load_dataset(selected_test_dir)  
-        return images, labels
+        while True:
+            choice = input("Select option (1-2): ").strip()
+            if choice == '1':
+                # List available datasets in the data directory
+                data_dirs = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))])
+                if not data_dirs:
+                    print("[ERROR] No datasets found in the specified directory.")
+                    print("       Please ensure you have dataset folders available.")
+                    return None, None
+                print("-" * 40)
+                for i, dir_name in enumerate(data_dirs, 1):
+                    print(f"  {i}. {dir_name}")
+                print("-" * 40)
+                try:
+                    data_idx = int(input(f"Select dataset (1-{len(data_dirs)}): ")) - 1
+                    if data_idx < 0 or data_idx >= len(data_dirs):
+                        print(f"[ERROR] Invalid selection. Please enter a number between 1 and {len(data_dirs)}")
+                        return None, None
+                    selected_test_dir = os.path.join(data_dir, data_dirs[data_idx])
+                except ValueError:
+                    print("[ERROR] Invalid input. Please enter a number.")
+                    return None, None
+                print(f"[INFO] Loading data from: {data_dirs[data_idx]}...")
+                images, labels = self.load_dataset(selected_test_dir)
+                return images, labels
+            elif choice == '2':
+                while True:
+                    custom_path = input("Enter the full path to your dataset directory (or type 'q' to go back): ").strip()
+                    if custom_path.lower() == 'q':
+                        break
+                    custom_path = os.path.join(custom_path, '')
+                    if not os.path.isdir(custom_path):
+                        print(f"[ERROR] The path '{custom_path}' is not a valid directory. Please try again.")
+                        continue
+                    print(f"[INFO] Loading data from: {custom_path} ...")
+                    images, labels = self.load_dataset(custom_path)
+                    return images, labels
+            else:
+                print("[ERROR] Please enter 1 or 2.")
+                continue
     
     def npzCheck(self, data_dir):
         print("\n" + "-" * 40)
