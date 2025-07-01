@@ -151,11 +151,13 @@ class Model:
             return None, None
         image = filtered_images[idx:idx+1]  # Keep batch dimension
         label = encoded_labels[idx:idx+1]
-        test_loss, test_accuracy = self.model.evaluate(image, label, verbose=0)
-        predicted_label = self.predict(filtered_images[idx])
+        # Get prediction probabilities
+        preds = self.model.predict(image, verbose=0)
+        pred_idx = np.argmax(preds, axis=1)[0]
+        confidence = float(np.max(preds[0]))
+        predicted_label = self.idx_to_label[pred_idx]
         actual_label = str_labels[valid_indices[idx]]
         correct = actual_label == predicted_label
-        confidence = float(test_accuracy)
         return {
             'index': idx,
             'actual_label': actual_label,

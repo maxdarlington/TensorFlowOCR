@@ -80,6 +80,7 @@ def result_helper(model, num, test_images, test_labels, save_csv):
     correct_predictions = 0
     total_predictions = 0
     results = []
+    confidences = []  # Collect confidences
     
     # Safety check for test_images
     if test_images is None or len(test_images) == 0:
@@ -114,6 +115,8 @@ def result_helper(model, num, test_images, test_labels, save_csv):
                 total_predictions += 1
                 if result['correct']:
                     correct_predictions += 1
+                if 'confidence' in result:
+                    confidences.append(result['confidence'])
                 
             if save_csv and result:
                 results.append(result)
@@ -132,6 +135,9 @@ def result_helper(model, num, test_images, test_labels, save_csv):
         print(f"[SUCCESS] Correct predictions: {correct_predictions:,}")
         print(f"[ERROR] Incorrect predictions: {total_predictions - correct_predictions:,}")
         print(f"[INFO] Average accuracy: {average_accuracy:.2f}%")
+        if confidences:
+            avg_conf = sum(confidences) / len(confidences)
+            print(f"[INFO] Average confidence: {avg_conf:.4f}")
         print("=" * 50)
     
     return results, correct_predictions, total_predictions
@@ -499,6 +505,7 @@ class Main():
                         throbber_idx = 0
                         last_throbber_update = time.time()
                         throbber_interval = 0.1
+                        confidences = []  # Collect confidences for automated mode
                         for i in range(num):
                             try:
                                 idx = random.randint(0, len(test_images) - 1) if rand_choice else i
@@ -507,6 +514,8 @@ class Main():
                                     total_predictions += 1
                                     if result['correct']:
                                         correct_predictions += 1
+                                    if 'confidence' in result:
+                                        confidences.append(result['confidence'])
                                 if save_csv and result:
                                     results.append(result)
                                 # Progress indicator with throbber and time estimation
@@ -551,6 +560,9 @@ class Main():
                             print(f"[SUCCESS] Correct predictions: {correct_predictions:,}")
                             print(f"[ERROR] Incorrect predictions: {total_predictions - correct_predictions:,}")
                             print(f"[INFO] Average accuracy: {average_accuracy:.2f}%")
+                            if confidences:
+                                avg_conf = sum(confidences) / len(confidences)
+                                print(f"[INFO] Average confidence: {avg_conf:.4f}")
                             print(f"[INFO] Processing time: {elapsed_time}s")
                             print("=" * 50)
                         if save_csv and results:
