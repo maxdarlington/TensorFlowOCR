@@ -22,6 +22,7 @@ def save_results_to_csv(results, csv_path):
     print(f"Results saved to {csv_path}")
 
 def foldername_to_label(folder_name):
+    """Map folder names to label characters (handles cases and symbols)."""
     if folder_name.startswith('upper'):
         return folder_name[-1].upper()
     elif folder_name.startswith('lower'):
@@ -31,34 +32,28 @@ def foldername_to_label(folder_name):
         'ampersand': '&', 'asterisk': '*', 'plus': '+', 'minus': '-', 'quesmark': '?',
         'lessthan': '<', 'greaterthan': '>'
     }
-    if folder_name in symbol_map:
-        return symbol_map[folder_name]
-    return folder_name  # for digits
+    return symbol_map.get(folder_name, folder_name)  # Default to folder_name for digits
 
 def process_single_image(image_path):
-    """Standalone function for processing a single image (for multiprocessing)"""
+    """Process a single image: load, resize, grayscale, normalize, and label."""
     try:
-        # Load and process image in one go
         with Image.open(image_path) as img:
-            # Convert to grayscale and resize in one operation if needed
+            # Convert to grayscale and resize if needed
             if img.size != (28, 28):
                 img = img.resize((28, 28), Image.Resampling.LANCZOS).convert('L')
             else:
                 img = img.convert('L')
-            
-            # Convert to numpy array, normalize, and add channel dimension
             img_array = np.array(img, dtype=np.float32) / 255.0
-            img_array = img_array.reshape(28, 28, 1)  # Add channel dimension for grayscale
+            img_array = img_array.reshape(28, 28, 1)  # Add channel dimension
             folder_name = os.path.basename(os.path.dirname(image_path))
             label = foldername_to_label(folder_name)
             return img_array, label
-    
     except Exception as e:
         print(f"Error processing image {image_path}: {str(e)}")
         return None, None
 
 def process_image_batch(image_paths):
-    """Process a batch of images for multiprocessing"""
+    """Process a batch of images for multiprocessing."""
     results = []
     for image_path in image_paths:
         img_array, label = process_single_image(image_path)
@@ -66,33 +61,34 @@ def process_image_batch(image_paths):
             results.append((img_array, label))
     return results
 
+def _print_progress(current, total, start_time, label):
+    """Helper to print progress updates with elapsed time."""
+    progress = (current / total) * 100
+    elapsed = time.time() - start_time
+    print(f"[INFO] Progress: {progress:.1f}% ({current:,}/{total:,} {label}) - {elapsed:.1f}s elapsed")
+
 class DatasetLoader:
     def __init__(self, data_dir, base_dir):
         self.data_dir = data_dir
         self.save_dir = os.path.join(os.path.dirname(base_dir), "content", "data")
         
     def process_image(self, image_path):
-        """Optimized single image processing"""
+        """Process a single image and return its array."""
         try:
-            # Load and process image in one go
             with Image.open(image_path) as img:
-                # Convert to grayscale and resize in one operation if needed
                 if img.size != (28, 28):
                     img = img.resize((28, 28), Image.Resampling.LANCZOS).convert('L')
                 else:
                     img = img.convert('L')
-                
-                # Convert to numpy array, normalize, and add channel dimension
                 img_array = np.array(img, dtype=np.float32) / 255.0
-                img_array = img_array.reshape(28, 28, 1)  # Add channel dimension for grayscale
+                img_array = img_array.reshape(28, 28, 1)
                 return img_array
-        
         except Exception as e:
             print(f"Error processing image {image_path}: {str(e)}")
             return None
     
     def get_all_image_paths(self, data_dir):
-        """Get all image paths efficiently using glob"""
+        """Get all image paths in a directory recursively."""
         image_extensions = ('*.png', '*.jpg', '*.jpeg', '*.bmp', '*.tiff')
         image_paths = []
         
@@ -103,7 +99,7 @@ class DatasetLoader:
         return image_paths
     
     def load_dataset(self, data_dir):
-        """Optimized dataset loading with multiprocessing"""
+        """Load dataset with multiprocessing for large sets, single-threaded for small."""
         print("[INFO] Preparing to process dataset. This may take a while...")
         show_loading_throbber("Processing dataset", duration=1.0)
         print("\n" + "-" * 40)
@@ -120,51 +116,33 @@ class DatasetLoader:
         print(f"[INFO] Found {len(image_paths):,} images. Processing...")
         start_time = time.time()
 
-        # Use single-threaded processing for small datasets
         if len(image_paths) <= 1000:
-            print("[INFO] Small dataset detected (<=100 images). Using single-threaded processing.")
+            print("[INFO] Small dataset detected (<=1000 images). Using single-threaded processing.")
             all_results = []
             for i, image_path in enumerate(image_paths):
                 img_array, label = process_single_image(image_path)
                 if img_array is not None:
                     all_results.append((img_array, label))
-                # Progress update every 10 images
                 if (i + 1) % 10 == 0 or (i + 1) == len(image_paths):
-                    progress = ((i + 1) / len(image_paths)) * 100
-                    elapsed = time.time() - start_time
-                    print(f"[INFO] Progress: {progress:.1f}% ({i + 1:,}/{len(image_paths):,} images) - {elapsed:.1f}s elapsed")
+                    _print_progress(i + 1, len(image_paths), start_time, "images")
         else:
-            # Try multiprocessing first, fallback to single-threaded if it fails
+            # Multiprocessing for large datasets
             try:
-                # Conservative multiprocessing configuration for system-friendly operation
-                # Use only 2 processes maximum to reduce system load
-                num_processes = min(2, mp.cpu_count() // 2)  # Use at most 2 processes or half of CPU cores
-                if num_processes < 1:
-                    num_processes = 1
-                
-                # Larger batch sizes to reduce overhead and memory pressure
-                batch_size = max(50, len(image_paths) // (num_processes * 2))  # Larger batches, fewer total
+                num_processes = min(2, mp.cpu_count() // 2) or 1
+                batch_size = max(50, len(image_paths) // (num_processes * 2))
                 print(f"[INFO] Using {num_processes} process(es) with batch size {batch_size}")
-                
-                # Split image paths into batches
                 batches = [image_paths[i:i + batch_size] for i in range(0, len(image_paths), batch_size)]
                 all_results = []
                 
-                # Process batches in parallel with limited concurrency
                 with ProcessPoolExecutor(max_workers=num_processes) as executor:
-                    # Submit batches one at a time to limit memory usage
                     futures = []
                     completed = 0
                     
                     for i, batch in enumerate(batches):
-                        # Submit batch
                         future = executor.submit(process_image_batch, batch)
                         futures.append(future)
                         
-                        # Wait for completion if we have too many pending futures
-                        # This prevents memory buildup and reduces system load
                         if len(futures) >= num_processes:
-                            # Wait for one future to complete
                             done_future = futures.pop(0)
                             try:
                                 batch_results = done_future.result()
@@ -173,13 +151,9 @@ class DatasetLoader:
                             except Exception as e:
                                 print(f"[WARNING] Batch processing failed: {e}")
                             
-                            # Progress update
                             if completed % max(1, len(batches) // 10) == 0 or completed % 5 == 0:
-                                progress = (completed / len(batches)) * 100
-                                elapsed = time.time() - start_time
-                                print(f"[INFO] Progress: {progress:.1f}% ({completed:,}/{len(batches):,} batches) - {elapsed:.1f}s elapsed")
+                                _print_progress(completed, len(batches), start_time, "batches")
                     
-                    # Wait for remaining futures
                     for future in futures:
                         try:
                             batch_results = future.result()
@@ -188,62 +162,29 @@ class DatasetLoader:
                         except Exception as e:
                             print(f"[WARNING] Batch processing failed: {e}")
                         
-                        # Final progress updates
                         if completed % max(1, len(batches) // 10) == 0 or completed % 5 == 0:
-                            progress = (completed / len(batches)) * 100
-                            elapsed = time.time() - start_time
-                            print(f"[INFO] Progress: {progress:.1f}% ({completed:,}/{len(batches):,} batches) - {elapsed:.1f}s elapsed")
+                            _print_progress(completed, len(batches), start_time, "batches")
                             
             except Exception as e:
                 print(f"[WARNING] Multiprocessing failed: {e}")
                 print("[INFO] Falling back to single-threaded processing...")
-                # Fallback to single-threaded processing
                 all_results = []
                 for i, image_path in enumerate(image_paths):
                     img_array, label = process_single_image(image_path)
                     if img_array is not None:
                         all_results.append((img_array, label))
-                    # Progress update every 100 images
-                    if (i + 1) % 100 == 0:
-                        progress = ((i + 1) / len(image_paths)) * 100
-                        elapsed = time.time() - start_time
-                        print(f"[INFO] Progress: {progress:.1f}% ({i + 1:,}/{len(image_paths):,} images) - {elapsed:.1f}s elapsed")
+                    if (i + 1) % 10 == 0 or (i + 1) == len(image_paths):
+                        _print_progress(i + 1, len(image_paths), start_time, "images")
         
-        # Separate images and labels
         if not all_results:
-            print("[ERROR] No images were successfully processed!")
+            print("[ERROR] No images processed successfully!")
             return None, None
         
         images, labels = zip(*all_results)
-        images = np.array(images, dtype=np.float32)
+        images = np.array(images)
         labels = np.array(labels)
-        
-        total_time = time.time() - start_time
-        print("\n" + "-" * 40)
-        print("PROCESSING COMPLETE")
-        print("-" * 40)
-        print(f"[INFO] Processed {len(images):,} images in {total_time:.2f} seconds")
-        print(f"[INFO] Average time per image: {total_time/len(images)*1000:.2f} ms")
-        print(f"[INFO] Image shape: {images.shape}")
-        
-        # Convert numpy string objects to regular strings for clean display
-        unique_labels = sorted(set(str(label) for label in labels))
-        print(f"[INFO] Unique labels: {unique_labels}")
-
-        # Shuffle the data
-        print("\n[INFO] Shuffling data...")
-        show_loading_throbber("Shuffling data", duration=0.5)
-        images_sh, labels_sh = shuffle(images, labels, random_state=42)
-        print("[SUCCESS] Data shuffling complete")
-        
-        print("\n[INFO] Do you want to save the processed data? (y/n): ")
-        save_choice = input().strip().lower()
-        if save_choice == 'y':
-            self.save_processed_data(images, labels, self.save_dir)
-        else:
-            print("[INFO] Processed data not saved.")
-        
-        return images_sh, labels_sh
+        print(f"[SUCCESS] Processed {len(images):,} images.")
+        return images, labels
     
     def save_processed_data(self, images, labels, save_dir):
         while True:

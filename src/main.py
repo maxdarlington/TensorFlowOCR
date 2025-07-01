@@ -76,6 +76,7 @@ def show_progress_with_throbber(message, current, total, start_time, update_inte
     return (throbber_idx + 1) % len(throbber_chars)
 
 def result_helper(model, num, test_images, test_labels, save_csv):
+    """Run test cases and collect results, optionally saving to CSV."""
     correct_predictions = 0
     total_predictions = 0
     results = []
@@ -136,6 +137,7 @@ def result_helper(model, num, test_images, test_labels, save_csv):
     return results, correct_predictions, total_predictions
 
 def test_case_num(test_images):
+    """Prompt user for number of test cases to run, with validation."""
     # Safety check for test_images
     if test_images is None or len(test_images) == 0:
         print("[ERROR] No test images available")
@@ -174,6 +176,7 @@ def test_case_num(test_images):
     return num
 
 def save_to_csv(results):
+    """Prompt user for CSV filename and save results to CSV."""
     try:
         print("\n" + "-" * 40)
         print("SAVE RESULTS TO CSV")
@@ -199,17 +202,17 @@ def save_to_csv(results):
         results.clear()
         
     except Exception as e:
-        print(f"[ERROR] Error saving CSV: {e}")
+        print(f"[ERROR] Failed to save results to CSV: {e}")
         print("       Please check the file path and permissions.")
 
 def get_valid_int_input(prompt, min_val, max_val):
+    """Prompt for an integer input within a range, with validation and error handling."""
     while True:
         try:
             choice = input(prompt).strip()
-            if not choice:  # Handle empty input
+            if not choice:
                 print(f"[ERROR] Please enter a number between {min_val} and {max_val}")
                 continue
-                
             choice_int = int(choice)
             if min_val <= choice_int <= max_val:
                 return choice_int
@@ -227,6 +230,7 @@ def get_valid_int_input(prompt, min_val, max_val):
             return
 
 def get_yes_no(prompt):
+    """Prompt for a yes/no response, returning True/False."""
     while True:
         try:
             choice = input(prompt).lower().strip()
@@ -247,44 +251,36 @@ def get_yes_no(prompt):
             continue
 
 def select_model(model_dir):
+    """Prompt user to select a model file from the model directory."""
     print("\n" + "-" * 40)
     print("MODEL SELECTION")
     print("-" * 40)
-    
     model_files = sorted([f for f in os.listdir(model_dir) if f.endswith('.keras')])
     if not model_files:
         print("[ERROR] No models found in the models directory.")
         print("       Please train a model first using option 1 from the main menu.")
         return None
-
     print(f"[INFO] Found {len(model_files)} model(s) in: {model_dir}")
     print()
-    
     for i, file in enumerate(model_files, 1):
         print(f"  {i}. {file}")
-    
     print("-" * 40)
-    
     while True:
         try:
             model_choice = input(f"Select a model (1-{len(model_files)}) or 'q' to quit: ").strip()
             if model_choice.lower() == 'q':
                 print("[INFO] Returning to main menu...")
                 return None
-                
             if not model_choice:
                 print("[ERROR] Please enter a number or 'q' to quit.")
                 continue
-                
             model_idx = int(model_choice) - 1
             if model_idx < 0 or model_idx >= len(model_files):
                 print(f"[ERROR] Invalid selection. Please enter a number between 1 and {len(model_files)}.")
                 continue
-                
             selected_model = os.path.join(model_dir, model_files[model_idx])
             print(f"[SUCCESS] Selected: {model_files[model_idx]}")
             return selected_model
-            
         except ValueError:
             print(f"[ERROR] Invalid input: '{model_choice}'. Please enter a number or 'q' to quit.")
         except KeyboardInterrupt:
@@ -302,10 +298,11 @@ class Main():
         self.data_dir = os.path.join(os.path.dirname(self.base_dir), "content", "data",)
         self.model_dir = os.path.join(os.path.dirname(self.base_dir), "content", "saved_models")
         self._DatasetLoader = None
-        self._CharacterImageGenerator = None  # add underscore prefix for private variable (add to log later)
+        self._CharacterImageGenerator = None  # add underscore prefix for private variable
 
     @property
     def DatasetLoader(self):
+        """Lazily import and instantiate DatasetLoader."""
         if self._DatasetLoader is None:
             from dataUtil import DatasetLoader
             self._DatasetLoader = DatasetLoader(self.data_dir, self.base_dir)
@@ -313,12 +310,14 @@ class Main():
     
     @property
     def CharacterImageGenerator(self):
+        """Lazily import and instantiate CharacterImageGenerator."""
         if self._CharacterImageGenerator is None:
             from imgUtil import CharacterImageGenerator
             self._CharacterImageGenerator = CharacterImageGenerator()
         return self._CharacterImageGenerator
 
     def trainingMode(self, data_dir, model_dir):
+        """Handle the training workflow: dataset selection, model training, and saving."""
         print("\n" + "=" * 50)
         print("TRAINING MODE")
         print("=" * 50)
@@ -397,7 +396,7 @@ class Main():
                 continue
 
     def testMode(self, data_dir, model_dir):
-        import numpy as np
+        """Handle the testing workflow: dataset selection, model loading, and test execution."""
         print("\n" + "=" * 50)
         print("TEST MODE")
         print("=" * 50)
@@ -413,11 +412,9 @@ class Main():
             if choice == 3:
                 print("Returning to main menu...")
                 return
-
             if not os.path.exists(data_dir):
                 print(f"Test directory not found at {data_dir}. Creating directory...")
                 os.makedirs(data_dir, exist_ok=True)
-
             if choice == 1:
                 print("[INFO] Processing dataset.")
                 show_loading_throbber("Processing dataset", duration=1.0)
@@ -426,17 +423,14 @@ class Main():
                 print("[INFO] Loading processed dataset (.npz).")
                 show_loading_throbber("Loading processed dataset", duration=1.0)
                 test_images, test_labels = self.DatasetLoader.npzCheck(data_dir)
-
             if test_images is None or test_labels is None or len(test_images) == 0 or len(test_labels) == 0:
                 print("Error: No test data available. Please check your dataset.")
                 continue
             break
-
         model_path = select_model(model_dir)
         if not model_path:
             return
-
-        # load model with error handling
+        # Load model with error handling
         try:
             print("\nLoading model...")
             show_loading_throbber("Loading model", duration=1.0)
@@ -447,7 +441,6 @@ class Main():
             print(f"Error loading model: {e}")
             print("Please check if the model file is corrupted or try a different model.")
             return
-
         while True:
             print("\n" + "-" * 30)
             print("TEST MENU")
@@ -476,69 +469,50 @@ class Main():
                     num = test_case_num(test_images)
                     if num == 0:
                         continue
-                    
                     print("\n" + "-" * 40)
                     print("AUTOMATED TESTING")
                     print("-" * 40)
-                    
                     start = time.time()
                     correct_predictions = 0
                     total_predictions = 0
                     results = []
-                    
                     if test_images is None or len(test_images) == 0:
                         print("[ERROR] test_images is None or empty")
                         continue
-                    
                     if test_labels is None or len(test_labels) == 0:
                         print("[ERROR] test_labels is None or empty")
                         continue
-                    
                     rand_choice = get_yes_no("Randomise test case order? (y/n): ")
                     if rand_choice is None:
                         rand_choice = False
-                    
                     print(f"[INFO] Randomization: {'Enabled' if rand_choice else 'Disabled'}")
                     print(f"[INFO] Processing {num:,} test cases...")
                     print("-" * 40)
-                    
                     try:
-                        # Loading throbber characters with consistent 0.1s interval
+                        # Automated test loop with progress and ETA
                         throbber_chars = ['|', '/', '-', '\\']
                         throbber_idx = 0
                         last_throbber_update = time.time()
-                        throbber_interval = 0.1  # Consistent with other throbbers
-                        
+                        throbber_interval = 0.1
                         for i in range(num):
                             try:
-                                if rand_choice:
-                                    idx = random.randint(0, len(test_images) - 1)
-                                else:
-                                    idx = i
-                                
+                                idx = random.randint(0, len(test_images) - 1) if rand_choice else i
                                 result = model.result(test_images, test_labels, idx)
                                 if result:
                                     total_predictions += 1
                                     if result['correct']:
                                         correct_predictions += 1
-                                
                                 if save_csv and result:
                                     results.append(result)
-                                    
                                 # Progress indicator with throbber and time estimation
                                 if (i + 1) % 100 == 0 or (i + 1) == num:
-                                    # Clear any existing throbber line first
                                     print("\r" + " " * 50 + "\r", end='', flush=True)
-                                    
                                     progress = ((i + 1) / num) * 100
                                     elapsed = time.time() - start
-                                    
-                                    # Calculate estimated time remaining
                                     if progress > 0:
                                         avg_time_per_test = elapsed / (i + 1)
                                         remaining_tests = num - (i + 1)
                                         estimated_remaining = avg_time_per_test * remaining_tests
-                                        
                                         if estimated_remaining > 60:
                                             minutes = int(estimated_remaining // 60)
                                             seconds = int(estimated_remaining % 60)
@@ -547,29 +521,22 @@ class Main():
                                             eta_str = f"{estimated_remaining:.1f} seconds"
                                         else:
                                             eta_str = f"{estimated_remaining*1000:.0f} milliseconds"
-                                        
                                         print(f"[INFO] Progress: {i + 1:,}/{num:,} ({progress:.1f}%) - ETA: {eta_str}")
                                     else:
                                         print(f"[INFO] Progress: {i + 1:,}/{num:,} ({progress:.1f}%)")
                                 else:
-                                    # Show throbber with consistent 0.1s interval
                                     current_time = time.time()
                                     if current_time - last_throbber_update >= throbber_interval:
                                         print(f"\r[INFO] Processing... {throbber_chars[throbber_idx]}", end='', flush=True)
                                         throbber_idx = (throbber_idx + 1) % len(throbber_chars)
                                         last_throbber_update = current_time
-                                    
                             except Exception as e:
                                 print(f"[ERROR] Error processing test case {i+1}: {e}")
                                 continue
-                        
-                        # Clear the throbber line
                         print("\r" + " " * 50 + "\r", end='', flush=True)
-                        
                         end = time.time()
                         elapsed_time = round(end - start, 2)
                         print(f"[INFO] Elapsed time: {elapsed_time}s")
-                        
                         if total_predictions > 0:
                             average_accuracy = (correct_predictions / total_predictions) * 100
                             print("\n" + "=" * 50)
@@ -581,15 +548,12 @@ class Main():
                             print(f"[INFO] Average accuracy: {average_accuracy:.2f}%")
                             print(f"[INFO] Processing time: {elapsed_time}s")
                             print("=" * 50)
-                        
                         if save_csv and results:
                             print("[INFO] Saving results to CSV...")
                             show_loading_throbber("Saving CSV", duration=0.5)
                             save_to_csv(results)
-                            
                     except Exception as e:
                         print(f"[ERROR] Error during testing: {e}")
-                    
                     break
             except ValueError:
                 print("[ERROR] Invalid input. Please enter a number between 1 and 3.")
@@ -604,11 +568,11 @@ class Main():
                 continue
 
 main = Main()
+
 if __name__ == "__main__":
     print("=" * 50)
     print("Welcome to Max's TensorFlow OCR!")
     print("=" * 50)
-    
     while True:
         try:
             print("-" * 30)
@@ -619,17 +583,13 @@ if __name__ == "__main__":
             print("3. Generate custom dataset of character images")
             print("4. Exit")
             print("-" * 30)
-
             choice = input("Please select an option (1-4): ").strip()
-
             if choice == '1':
                 print("\nStarting Training Mode...")
                 main.trainingMode(main.data_dir, main.model_dir)
-
             elif choice == '2':
                 print("\nStarting Test Mode...")
                 main.testMode(main.data_dir, main.model_dir)
-
             elif choice == '3':
                 print("\nStarting Dataset Generation...")
                 print("\n" + "-" * 40)
@@ -644,16 +604,13 @@ if __name__ == "__main__":
                 print(f"[INFO] Random rotation: {'Enabled' if apply_rotation else 'Disabled'}")
                 print("-" * 40)
                 main.CharacterImageGenerator.generateImages(apply_rotation)
-
             elif choice == '4':
                 print("\nThank you for using Max's TensorFlow OCR! (^_^)")
                 print("Exiting program...")
                 sys.exit(0)
-
             else:
                 print(f"\n[ERROR] Invalid choice: '{choice}'")
                 print("Please enter a number between 1 and 4.")
-
         except KeyboardInterrupt:
             print("\n\n[WARNING] Operation cancelled by user.")
             print("Returning to main menu...")
