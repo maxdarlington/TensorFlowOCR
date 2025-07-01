@@ -339,11 +339,14 @@ class Main():
                 os.makedirs(data_dir, exist_ok=True)
 
             if choice == 1:
-                print("[INFO] Processing dataset. This may take a while...")
                 show_loading_throbber("Processing dataset", duration=1.0)
                 train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
+                # Prompt to save processed data as .npz
+                if train_images is not None and train_labels is not None:
+                    save_npz = get_yes_no("Save processed data as .npz for faster future loading? (y/n): ")
+                    if save_npz:
+                        self.DatasetLoader.save_processed_data(train_images, train_labels, data_dir)
             elif choice == 2:
-                print("[INFO] Loading processed dataset (.npz). This may take a while...")
                 show_loading_throbber("Loading processed dataset", duration=1.0)
                 train_images, train_labels = self.DatasetLoader.npzCheck(data_dir)
 
@@ -416,11 +419,14 @@ class Main():
                 print(f"Test directory not found at {data_dir}. Creating directory...")
                 os.makedirs(data_dir, exist_ok=True)
             if choice == 1:
-                print("[INFO] Processing dataset.")
                 show_loading_throbber("Processing dataset", duration=1.0)
                 test_images, test_labels = self.DatasetLoader.dataDirCheck(data_dir)
+                # Prompt to save processed data as .npz
+                if test_images is not None and test_labels is not None:
+                    save_npz = get_yes_no("Save processed data as .npz for faster future loading? (y/n): ")
+                    if save_npz:
+                        self.DatasetLoader.save_processed_data(test_images, test_labels, data_dir)
             elif choice == 2:
-                print("[INFO] Loading processed dataset (.npz).")
                 show_loading_throbber("Loading processed dataset", duration=1.0)
                 test_images, test_labels = self.DatasetLoader.npzCheck(data_dir)
             if test_images is None or test_labels is None or len(test_images) == 0 or len(test_labels) == 0:
@@ -432,7 +438,6 @@ class Main():
             return
         # Load model with error handling
         try:
-            print("\nLoading model...")
             show_loading_throbber("Loading model", duration=1.0)
             model = Model()
             model.load_model(model_path)

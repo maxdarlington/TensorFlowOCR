@@ -34,6 +34,32 @@ def foldername_to_label(folder_name):
     }
     return symbol_map.get(folder_name, folder_name)  # Default to folder_name for digits
 
+def filename_to_label(filename):
+    base = os.path.splitext(filename)[0]
+    parts = base.split('_')
+    label_part = parts[-1]
+    # If label_part is a digit and in ASCII range, convert to char
+    if label_part.isdigit():
+        ascii_code = int(label_part)
+        if 32 <= ascii_code <= 126:  # Printable ASCII
+            return chr(ascii_code)
+    return label_part  # Otherwise, return as is (e.g., 'A', 'exclmark')
+
+def get_valid_labels():
+    nums = [str(i) for i in range(10)]
+    upper_chars = [chr(i) for i in range(65, 91)]
+    lower_chars = [chr(i) for i in range(97, 123)]
+    symbols = ['!', '@', '#', '$', '%', '&', '*', '+', '-', '?', '<', '>']
+    return set(nums + upper_chars + lower_chars + symbols)
+
+def extract_label(image_path, valid_labels):
+    folder = os.path.basename(os.path.dirname(image_path))
+    filename = os.path.basename(image_path)
+    label = foldername_to_label(folder)
+    if label not in valid_labels:
+        label = filename_to_label(filename)
+    return label if label in valid_labels else None
+
 def process_single_image(image_path):
     """Process a single image: load, resize, grayscale, normalize, and label."""
     try:
@@ -45,8 +71,10 @@ def process_single_image(image_path):
                 img = img.convert('L')
             img_array = np.array(img, dtype=np.float32) / 255.0
             img_array = img_array.reshape(28, 28, 1)  # Add channel dimension
-            folder_name = os.path.basename(os.path.dirname(image_path))
-            label = foldername_to_label(folder_name)
+            valid_labels = get_valid_labels()
+            label = extract_label(image_path, valid_labels)
+            if label is None:
+                return None, None
             return img_array, label
     except Exception as e:
         print(f"Error processing image {image_path}: {str(e)}")
