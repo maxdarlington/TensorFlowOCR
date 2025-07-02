@@ -139,11 +139,12 @@ class DatasetLoader:
         
         if not image_paths:
             print("[ERROR] No image files found in the specified directory!")
-            return None, None
+            return None, None, None
         
         print(f"[INFO] Found {len(image_paths):,} images. Processing...")
         start_time = time.time()
 
+        all_filenames = []
         if len(image_paths) <= 1000:
             print("[INFO] Small dataset detected (<=1000 images). Using single-threaded processing.")
             all_results = []
@@ -151,6 +152,7 @@ class DatasetLoader:
                 img_array, label = process_single_image(image_path)
                 if img_array is not None:
                     all_results.append((img_array, label))
+                    all_filenames.append(image_path)
                 if (i + 1) % 10 == 0 or (i + 1) == len(image_paths):
                     _print_progress(i + 1, len(image_paths), start_time, "images")
         else:
@@ -165,34 +167,32 @@ class DatasetLoader:
                 with ProcessPoolExecutor(max_workers=num_processes) as executor:
                     futures = []
                     completed = 0
-                    
+                    batch_filenames = []
                     for i, batch in enumerate(batches):
                         future = executor.submit(process_image_batch, batch)
-                        futures.append(future)
-                        
+                        futures.append((future, batch))
                         if len(futures) >= num_processes:
-                            done_future = futures.pop(0)
+                            done_future, done_batch = futures.pop(0)
                             try:
                                 batch_results = done_future.result()
                                 all_results.extend(batch_results)
+                                batch_filenames.extend(done_batch)
                                 completed += 1
                             except Exception as e:
                                 print(f"[WARNING] Batch processing failed: {e}")
-                            
                             if completed % max(1, len(batches) // 10) == 0 or completed % 5 == 0:
                                 _print_progress(completed, len(batches), start_time, "batches")
-                    
-                    for future in futures:
+                    for future, batch in futures:
                         try:
                             batch_results = future.result()
                             all_results.extend(batch_results)
+                            batch_filenames.extend(batch)
                             completed += 1
                         except Exception as e:
                             print(f"[WARNING] Batch processing failed: {e}")
-                        
                         if completed % max(1, len(batches) // 10) == 0 or completed % 5 == 0:
                             _print_progress(completed, len(batches), start_time, "batches")
-                            
+                all_filenames = batch_filenames
             except Exception as e:
                 print(f"[WARNING] Multiprocessing failed: {e}")
                 print("[INFO] Falling back to single-threaded processing...")
@@ -201,52 +201,47 @@ class DatasetLoader:
                     img_array, label = process_single_image(image_path)
                     if img_array is not None:
                         all_results.append((img_array, label))
+                        all_filenames.append(image_path)
                     if (i + 1) % 10 == 0 or (i + 1) == len(image_paths):
                         _print_progress(i + 1, len(image_paths), start_time, "images")
         
         if not all_results:
             print("[ERROR] No images processed successfully!")
-            return None, None
+            return None, None, None
         
         images, labels = zip(*all_results)
         images = np.array(images)
         labels = np.array(labels)
+        all_filenames = np.array(all_filenames)
         print(f"[SUCCESS] Processed {len(images):,} images.")
-        return images, labels
+        return images, labels, all_filenames
     
-    def save_processed_data(self, images, labels, save_dir):
+    def save_processed_data(self, images, labels, filenames, save_dir):
         while True:
             try:
                 filename = input("Enter name for processed data: ").strip()
-                                
                 if not filename:
                     print("Filename cannot be empty. Please try again.")
                     continue
-                
                 invalid_chars = '<>:"/\\|?*'
                 if any(char in filename for char in invalid_chars):
                     print(f"Filename contains invalid characters. Please avoid: {invalid_chars}")
                     continue
-                
                 filepath = os.path.join(save_dir, f"{filename}.npz")
-                
                 if os.path.exists(filepath):
                     overwrite = input("File already exists. Overwrite? (y/n): ").strip().lower()
                     if overwrite != 'y':
                         continue
-                
-                if images is None or labels is None:
-                    print("Error: Images or labels data is None")
+                if images is None or labels is None or filenames is None:
+                    print("Error: Images, labels, or filenames data is None")
                     return None
-                
                 np.savez(filepath,
                         images=images,
                         labels=labels,
+                        filenames=filenames
                         )   
-                        
                 print(f"Processed data saved to {filepath}")
                 return filepath 
-            
             except Exception as e:
                 print(f"Error saving data: {e}")
                 retry = input("Try again? (y/n): ").strip().lower()
@@ -260,11 +255,11 @@ class DatasetLoader:
             data = np.load(filename)
             images = data['images']
             labels = data['labels']
-            return images, labels
-
+            filenames = data['filenames'] if 'filenames' in data else None
+            return images, labels, filenames
         except Exception as e:
             print(f"Error loading data: {e}")
-            return None, None
+            return None, None, None
 
     def dataDirCheck(self, data_dir):
         print("\n" + "-" * 40)
@@ -282,7 +277,7 @@ class DatasetLoader:
                 if not data_dirs:
                     print("[ERROR] No datasets found in the specified directory.")
                     print("       Please ensure you have dataset folders available.")
-                    return None, None
+                    return None, None, None
                 print("-" * 40)
                 for i, dir_name in enumerate(data_dirs, 1):
                     print(f"  {i}. {dir_name}")
@@ -291,14 +286,14 @@ class DatasetLoader:
                     data_idx = int(input(f"Select dataset (1-{len(data_dirs)}): ")) - 1
                     if data_idx < 0 or data_idx >= len(data_dirs):
                         print(f"[ERROR] Invalid selection. Please enter a number between 1 and {len(data_dirs)}")
-                        return None, None
+                        return None, None, None
                     selected_test_dir = os.path.join(data_dir, data_dirs[data_idx])
                 except ValueError:
                     print("[ERROR] Invalid input. Please enter a number.")
-                    return None, None
+                    return None, None, None
                 print(f"[INFO] Loading data from: {data_dirs[data_idx]}...")
-                images, labels = self.load_dataset(selected_test_dir)
-                return images, labels
+                images, labels, filenames = self.load_dataset(selected_test_dir)
+                return images, labels, filenames
             elif choice == '2':
                 while True:
                     custom_path = input("Enter the full path to your dataset directory (or type 'q' to go back): ").strip()
@@ -309,8 +304,8 @@ class DatasetLoader:
                         print(f"[ERROR] The path '{custom_path}' is not a valid directory. Please try again.")
                         continue
                     print(f"[INFO] Loading data from: {custom_path} ...")
-                    images, labels = self.load_dataset(custom_path)
-                    return images, labels
+                    images, labels, filenames = self.load_dataset(custom_path)
+                    return images, labels, filenames
             else:
                 print("[ERROR] Please enter 1 or 2.")
                 continue
@@ -324,7 +319,7 @@ class DatasetLoader:
         # verify directory exists
         if not os.path.exists(data_dir):
             print(f"[ERROR] Directory {data_dir} does not exist")
-            return None, None
+            return None, None, None
         
         # get available test data files with debug info
         files = sorted([file for file in os.listdir(data_dir) if file.endswith('.npz')])
@@ -333,7 +328,7 @@ class DatasetLoader:
         if not files:
             print("[ERROR] No .npz files found in the specified directory.")
             print("       Please ensure you have processed data files available.")
-            return None, None
+            return None, None, None
         
         print("-" * 40)
         # print available files with full paths
@@ -349,7 +344,7 @@ class DatasetLoader:
             idx = int(input(f"Select dataset (1-{len(files)}): ")) - 1
             if idx < 0 or idx >= len(files):
                 print(f"[ERROR] Invalid selection. Please enter a number between 1 and {len(files)}")
-                return None, None
+                return None, None, None
                 
             selected_file = os.path.join(data_dir, files[idx])
             print(f"[INFO] Loading data from: {selected_file}")
@@ -360,10 +355,11 @@ class DatasetLoader:
                 if 'images' not in data or 'labels' not in data:
                     print(f"[ERROR] File missing required arrays 'images' or 'labels'")
                     print(f"       Available arrays: {data.files}")
-                    return None, None
+                    return None, None, None
                     
                 images = data['images']
                 labels = data['labels']
+                filenames = data['filenames'] if 'filenames' in data else None
                 
                 print("\n" + "-" * 40)
                 print("DATASET LOADED SUCCESSFULLY")
@@ -374,12 +370,12 @@ class DatasetLoader:
                 print(f"[INFO] Unique labels: {len(set(labels))}")
                 print("-" * 40)
                 
-                return images, labels
+                return images, labels, filenames
                 
             except Exception as e:
                 print(f"[ERROR] Error loading npz file: {e}")
-                return None, None
+                return None, None, None
                 
         except ValueError:
             print("[ERROR] Invalid input. Please enter a number.")
-            return None, None
+            return None, None, None
