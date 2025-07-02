@@ -75,7 +75,7 @@ def show_progress_with_throbber(message, current, total, start_time, update_inte
     
     return (throbber_idx + 1) % len(throbber_chars)
 
-def result_helper(model, num, test_images, test_labels, save_csv):
+def result_helper(model, num, test_images, test_labels, test_filenames, save_csv):
     """Run test cases and collect results, optionally saving to CSV."""
     correct_predictions = 0
     total_predictions = 0
@@ -107,19 +107,20 @@ def result_helper(model, num, test_images, test_labels, save_csv):
             else:
                 idx = i
 
-            result = model.result(test_images, test_labels, idx)
+            filename = test_filenames[idx] if test_filenames is not None else None
+            result = model.result(test_images, test_labels, idx, filename)
             predicted_label = model.predict(test_images[idx])
             model.plot(test_images[idx], predicted_label)
 
-            if result:
+            if isinstance(result, dict):
                 total_predictions += 1
-                if result['correct']:
+                if result.get('correct'):
                     correct_predictions += 1
                 if 'confidence' in result:
                     confidences.append(result['confidence'])
                 
-            if save_csv and result:
-                results.append(result)
+                if save_csv:
+                    results.append(result)
 
         except Exception as e:
             print(f"[ERROR] Error processing test case {i+1}: {e}")
@@ -346,15 +347,21 @@ class Main():
 
             if choice == 1:
                 show_loading_throbber("Processing dataset", duration=1.0)
-                train_images, train_labels = self.DatasetLoader.dataDirCheck(data_dir)
+                data_check = self.DatasetLoader.dataDirCheck(data_dir)
+                if not isinstance(data_check, tuple) or len(data_check) != 3 or any(x is None for x in data_check):
+                    continue
+                train_images, train_labels, _ = data_check
                 # Prompt to save processed data as .npz
                 if train_images is not None and train_labels is not None:
                     save_npz = get_yes_no("Save processed data as .npz for faster future loading? (y/n): ")
                     if save_npz:
-                        self.DatasetLoader.save_processed_data(train_images, train_labels, data_dir)
+                        self.DatasetLoader.save_processed_data(train_images, train_labels, _, data_dir)
             elif choice == 2:
                 show_loading_throbber("Loading processed dataset", duration=1.0)
-                train_images, train_labels = self.DatasetLoader.npzCheck(data_dir)
+                npz_check = self.DatasetLoader.npzCheck(data_dir)
+                if not isinstance(npz_check, tuple) or len(npz_check) != 3 or any(x is None for x in npz_check):
+                    continue
+                train_images, train_labels, _ = npz_check
 
             if train_images is None or train_labels is None:
                 print("Failed to load training data. Please check your dataset.")
@@ -426,15 +433,19 @@ class Main():
                 os.makedirs(data_dir, exist_ok=True)
             if choice == 1:
                 show_loading_throbber("Processing dataset", duration=1.0)
-                test_images, test_labels = self.DatasetLoader.dataDirCheck(data_dir)
-                # Prompt to save processed data as .npz
-                if test_images is not None and test_labels is not None:
-                    save_npz = get_yes_no("Save processed data as .npz for faster future loading? (y/n): ")
-                    if save_npz:
-                        self.DatasetLoader.save_processed_data(test_images, test_labels, data_dir)
+                data_check = self.DatasetLoader.dataDirCheck(data_dir)
+                if not isinstance(data_check, tuple) or len(data_check) != 3 or any(x is None for x in data_check):
+                    continue
+                test_images, test_labels, test_filenames = data_check
+                save_npz = get_yes_no("Save processed data as .npz for faster future loading? (y/n): ")
+                if save_npz:
+                    self.DatasetLoader.save_processed_data(test_images, test_labels, test_filenames, data_dir)
             elif choice == 2:
                 show_loading_throbber("Loading processed dataset", duration=1.0)
-                test_images, test_labels = self.DatasetLoader.npzCheck(data_dir)
+                npz_check = self.DatasetLoader.npzCheck(data_dir)
+                if not isinstance(npz_check, tuple) or len(npz_check) != 3 or any(x is None for x in npz_check):
+                    continue
+                test_images, test_labels, test_filenames = npz_check
             if test_images is None or test_labels is None or len(test_images) == 0 or len(test_labels) == 0:
                 print("Error: No test data available. Please check your dataset.")
                 continue
@@ -468,9 +479,9 @@ class Main():
                 save_csv = get_yes_no("Save results to CSV? (y/n): ")
                 if user_input == 1:
                     num = test_case_num(test_images)
-                    if num == 0:
+                    if num == 0 or test_images is None or test_labels is None or test_filenames is None:
                         continue
-                    results, correct_predictions, total_predictions = result_helper(model, num, test_images, test_labels, save_csv)
+                    results, correct_predictions, total_predictions = result_helper(model, num, test_images, test_labels, test_filenames, save_csv)
                     if save_csv and results:
                         print("[INFO] Saving results to CSV...")
                         show_loading_throbber("Saving CSV", duration=0.5)
@@ -478,7 +489,7 @@ class Main():
                     break
                 elif user_input == 2:
                     num = test_case_num(test_images)
-                    if num == 0:
+                    if num == 0 or test_images is None or test_labels is None or test_filenames is None:
                         continue
                     print("\n" + "-" * 40)
                     print("AUTOMATED TESTING")
@@ -509,7 +520,7 @@ class Main():
                         for i in range(num):
                             try:
                                 idx = random.randint(0, len(test_images) - 1) if rand_choice else i
-                                result = model.result(test_images, test_labels, idx)
+                                result = model.result(test_images, test_labels, idx, test_filenames[idx] if test_filenames is not None else None)
                                 if result:
                                     total_predictions += 1
                                     if result['correct']:

@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, Flatten, MaxPooling2D, Dense, Input
+import os
 
 class Model:
     def __init__(self):
@@ -137,7 +138,7 @@ class Model:
                 print("\n[WARNING] End of input detected.")
                 raise
 
-    def result(self, test_images, test_labels, idx):
+    def result(self, test_images, test_labels, idx, filename=None):
         """Evaluate a single test image and return prediction details."""
         str_labels = [str(label) for label in test_labels]
         valid_indices = [i for i, label in enumerate(str_labels) if label in self.valid_labels]
@@ -160,6 +161,7 @@ class Model:
         correct = actual_label == predicted_label
         return {
             'index': idx,
+            'input': os.path.basename(filename) if filename else None,
             'actual_label': actual_label,
             'predicted_label': predicted_label,
             'correct': correct,
