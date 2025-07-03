@@ -56,7 +56,6 @@ TensorFlowOCR/
 
 1. **Place font files** in the `content/fonts/` directory
 2. **Supported formats**: `.ttf`, `.otf`, `.woff2`
-3. **Recommended structure**: Use Regular and Bold variants for each font family
 
 ### Included Fonts
 
