@@ -13,7 +13,7 @@ A comprehensive Optical Character Recognition (OCR) system built with TensorFlow
 
 ## Requirements
 
-- **Python**: 3.11+ (recommended for best performance)
+- **Python**: 3.11
 - **Operating System**: Windows, macOS, or Linux
 - **Memory**: 8GB+ RAM recommended for large datasets
 
