@@ -208,14 +208,4 @@ python src\main.py
    - Close other applications
    - Use smaller datasets for testing
 
-4. **Slow performance**
-   - The program uses conservative multiprocessing for stability
-   - This is intentional to prevent system freezes
-
-### System Requirements
-
-- **Minimum**: 4GB RAM, 2GB free disk space
-- **Recommended**: 8GB+ RAM, 5GB+ free disk space
-- **For large datasets**: 16GB+ RAM recommended
-
 **Happy OCR Training! (^\_^)**
